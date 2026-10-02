@@ -1,0 +1,107 @@
+You are helping turn a deterministic optimization model into a two-stage stochastic program.
+
+The user has a working deterministic model: a Python function that builds the model from a
+data dictionary. Your job is to propose (1) which data entries are uncertain, and (2) which
+decision variables are first-stage, meaning they must be fixed BEFORE the uncertain data is
+known. All other variables are second-stage (recourse): they are chosen after the uncertainty
+is revealed and may differ in every scenario.
+
+Typical first-stage decisions: investment, capacity, opening or building, planting, staffing
+levels, orders placed in advance. Typical second-stage decisions: shipping, production
+adjustments, buying or selling on the spot market, overtime, shortage, outsourcing, inventory
+that results from realized demand.
+
+## Model source code
+```python
+"""Capacitated facility location for one week, as an ordinary deterministic Pyomo model."""
+import pyomo.environ as pyo
+
+SITES = ["S1", "S2", "S3", "S4", "S5"]
+CUSTOMERS = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"]
+
+# site and customer coordinates (synthetic)
+_SITE_XY = {"S1": (2, 8), "S2": (8, 8), "S3": (5, 5), "S4": (2, 2), "S5": (8, 2)}
+_CUST_XY = {"C1": (1, 9), "C2": (4, 8), "C3": (7, 9), "C4": (9, 6),
+            "C5": (6, 4), "C6": (3, 4), "C7": (1, 1), "C8": (8, 1)}
+
+DATA = {
+    "fixed_cost": {"S1": 1500, "S2": 1400, "S3": 1900, "S4": 1300, "S5": 1450},   # per week
+    "capacity": {"S1": 110, "S2": 100, "S3": 150, "S4": 95, "S5": 105},           # units per week
+    "ship_cost": {(i, j): round(1.0 + 0.9 * (abs(_SITE_XY[i][0] - _CUST_XY[j][0])
+                                           + abs(_SITE_XY[i][1] - _CUST_XY[j][1])), 2)
+                  for i in SITES for j in CUSTOMERS},                             # per unit
+    "outsource_cost": 80.0,                                                       # per unit short
+    "demand": {"C1": 38, "C2": 42, "C3": 35, "C4": 40, "C5": 45, "C6": 36, "C7": 33, "C8": 41},
+}
+
+
+def build_model(data):
+    m = pyo.ConcreteModel()
+    m.open = pyo.Var(SITES, domain=pyo.Binary)
+    m.ship = pyo.Var(SITES, CUSTOMERS, domain=pyo.NonNegativeReals)
+    m.short = pyo.Var(CUSTOMERS, domain=pyo.NonNegativeReals)
+
+    m.cost = pyo.Objective(
+        expr=sum(data["fixed_cost"][i] * m.open[i] for i in SITES)
+        + sum(data["ship_cost"][i, j] * m.ship[i, j] for i in SITES for j in CUSTOMERS)
+        + data["outsource_cost"] * sum(m.short[j] for j in CUSTOMERS),
+        sense=pyo.minimize)
+
+    m.meet = pyo.Constraint(CUSTOMERS, rule=lambda m, j:
+                            sum(m.ship[i, j] for i in SITES) + m.short[j] >= data["demand"][j])
+    m.cap = pyo.Constraint(SITES, rule=lambda m, i:
+                           sum(m.ship[i, j] for j in CUSTOMERS) <= data["capacity"][i] * m.open[i])
+    return m
+```
+
+## Data dictionary
+- fixed_cost: dict with numeric entries: S1=1500, S2=1400, S3=1900, S4=1300, S5=1450
+- capacity: dict with numeric entries: S1=110, S2=100, S3=150, S4=95, S5=105
+- ship_cost: dict with numeric entries: ('S1', 'C1')=2.8, ('S1', 'C2')=2.8, ('S1', 'C3')=6.4, ('S1', 'C4')=9.1, ('S1', 'C5')=8.2, ('S1', 'C6')=5.5, ... (40 numbers)
+- outsource_cost: number = 80.0
+- demand: dict with numeric entries: C1=38, C2=42, C3=35, C4=40, C5=45, C6=36, ... (8 numbers)
+
+## Variables in the built model
+- ship[*]: 40 continuous variable(s), e.g. ship[S1,C1], ship[S2,C1], ship[S3,C1]
+- short[*]: 8 continuous variable(s), e.g. short[C1], short[C2], short[C3]
+- open[*]: 5 integer/binary variable(s), e.g. open[S1], open[S2], open[S3]
+
+## Where each numeric data key enters the model
+(found by changing the key by 10% and rebuilding the model)
+- fixed_cost: 5 objective coefficients
+- capacity: 5 constraint coefficients (rows such as cap[S1], cap[S2], cap[S3], cap[S4])
+- ship_cost: 40 objective coefficients
+- outsource_cost: 8 objective coefficients
+- demand: 8 right-hand sides (rows such as meet[C1], meet[C2], meet[C3], meet[C4])
+
+## Historical observations
+260 observations (rows). Columns: week, C1, C2, C3, C4, C5, C6, C7, C8
+First rows:
+ week   C1   C2   C3   C4   C5   C6   C7   C8
+    1 35.3 36.5 39.3 28.3 41.0 39.0 33.9 38.7
+    2 20.8 45.5 36.6 19.1 29.1 25.6 22.3 37.3
+    3 43.5 44.6 23.7 41.4 42.4 31.7 35.6 54.4
+
+## Answer format
+Reply with one YAML block and nothing else:
+
+```yaml
+first_stage:        # patterns on variable names; * matches any characters
+- "pattern*"
+uncertain:          # top-level data keys (or dotted entries such as yield.wheat)
+- key
+columns: {}         # only if a history column name differs from the data entry: {"demand.C1": "col_name"}
+scenarios:
+  method: kmeans    # empirical (each observation is a scenario), kmeans, or sample
+  n: 30             # omit for empirical
+  seed: 0
+holdout: 0.3        # share of the history kept aside for an out-of-sample test; 0 if there is no history
+notes: one or two sentences: why these are first-stage, and anything you are unsure about
+```
+
+Rules:
+- Use variable-name patterns exactly as the names appear above.
+- Only list data keys that exist in the data dictionary and enter the model.
+- If there is a history, the uncertain keys must be the ones the history columns describe.
+- With fewer than about 60 observations use method empirical; otherwise kmeans with n about 30.
+- Do not invent data, scenarios or probabilities.

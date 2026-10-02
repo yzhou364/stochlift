@@ -1,0 +1,12 @@
+first_stage:
+- acres_*
+uncertain:
+- yield.wheat
+- yield.corn
+- yield.beets
+columns: {}
+scenarios:
+  method: explicit
+  n: 3
+holdout: 0.0
+notes: ''

@@ -1,0 +1,108 @@
+You are helping turn a deterministic optimization model into a two-stage stochastic program.
+
+The user has a working deterministic model: a Python function that builds the model from a
+data dictionary. Your job is to propose (1) which data entries are uncertain, and (2) which
+decision variables are first-stage, meaning they must be fixed BEFORE the uncertain data is
+known. All other variables are second-stage (recourse): they are chosen after the uncertainty
+is revealed and may differ in every scenario.
+
+Typical first-stage decisions: investment, capacity, opening or building, planting, staffing
+levels, orders placed in advance. Typical second-stage decisions: shipping, production
+adjustments, buying or selling on the spot market, overtime, shortage, outsourcing, inventory
+that results from realized demand.
+
+## Model source code
+```python
+"""The farmer problem (Birge and Louveaux, Introduction to Stochastic Programming, ch. 1).
+
+This file is an ordinary *deterministic* PuLP model. It knows nothing about
+scenarios: StochLift calls ``build_model`` once per scenario with different data.
+"""
+import pulp
+
+CROPS = ["wheat", "corn", "beets"]
+
+DATA = {
+    "land": 500,                                                  # acres
+    "plant_cost": {"wheat": 150, "corn": 230, "beets": 260},      # $/acre
+    "yield": {"wheat": 2.5, "corn": 3.0, "beets": 20.0},          # tons/acre (average year)
+    "feed_need": {"wheat": 200, "corn": 240},                     # tons needed for cattle
+    "buy_price": {"wheat": 238, "corn": 210},                     # $/ton
+    "sell_price": {"wheat": 170, "corn": 150, "beets": 36},       # $/ton
+    "beet_quota": 6000,                                           # tons sold at full price
+    "beet_excess_price": 10,                                      # $/ton above the quota
+}
+
+
+def build_model(data):
+    m = pulp.LpProblem("farmer", pulp.LpMinimize)
+    acres = pulp.LpVariable.dicts("acres", CROPS, lowBound=0)
+    buy = pulp.LpVariable.dicts("buy", ["wheat", "corn"], lowBound=0)
+    sell = pulp.LpVariable.dicts("sell", CROPS, lowBound=0)
+    sell_excess = pulp.LpVariable("sell_beets_excess", lowBound=0)
+
+    m += (pulp.lpSum(data["plant_cost"][c] * acres[c] for c in CROPS)
+          + pulp.lpSum(data["buy_price"][c] * buy[c] for c in buy)
+          - pulp.lpSum(data["sell_price"][c] * sell[c] for c in CROPS)
+          - data["beet_excess_price"] * sell_excess), "net_cost"
+
+    m += pulp.lpSum(acres[c] for c in CROPS) <= data["land"], "land"
+    for c in ["wheat", "corn"]:
+        m += data["yield"][c] * acres[c] + buy[c] - sell[c] >= data["feed_need"][c], f"feed_{c}"
+    m += sell["beets"] + sell_excess <= data["yield"]["beets"] * acres["beets"], "beet_harvest"
+    m += sell["beets"] <= data["beet_quota"], "beet_quota"
+    return m
+```
+
+## Data dictionary
+- land: number = 500
+- plant_cost: dict with numeric entries: wheat=150, corn=230, beets=260
+- yield: dict with numeric entries: wheat=2.5, corn=3, beets=20
+- feed_need: dict with numeric entries: wheat=200, corn=240
+- buy_price: dict with numeric entries: wheat=238, corn=210
+- sell_price: dict with numeric entries: wheat=170, corn=150, beets=36
+- beet_quota: number = 6000
+- beet_excess_price: number = 10
+
+## Variables in the built model
+- acres_*: 3 continuous variable(s), e.g. acres_beets, acres_corn, acres_wheat
+- buy_*: 2 continuous variable(s), e.g. buy_corn, buy_wheat
+- sell_*: 4 continuous variable(s), e.g. sell_beets, sell_beets_excess, sell_corn
+
+## Where each numeric data key enters the model
+(found by changing the key by 10% and rebuilding the model)
+- land: 1 right-hand sides (rows such as land)
+- plant_cost: 3 objective coefficients
+- yield: 3 constraint coefficients (rows such as feed_wheat, feed_corn, beet_harvest)
+- feed_need: 2 right-hand sides (rows such as feed_wheat, feed_corn)
+- buy_price: 2 objective coefficients
+- sell_price: 3 objective coefficients
+- beet_quota: 1 right-hand sides (rows such as beet_quota)
+- beet_excess_price: 1 objective coefficients
+
+## Historical observations
+None. Scenarios will be supplied by the user; set holdout to 0 and method to empirical.
+
+## Answer format
+Reply with one YAML block and nothing else:
+
+```yaml
+first_stage:        # patterns on variable names; * matches any characters
+- "pattern*"
+uncertain:          # top-level data keys (or dotted entries such as yield.wheat)
+- key
+columns: {}         # only if a history column name differs from the data entry: {"demand.C1": "col_name"}
+scenarios:
+  method: kmeans    # empirical (each observation is a scenario), kmeans, or sample
+  n: 30             # omit for empirical
+  seed: 0
+holdout: 0.3        # share of the history kept aside for an out-of-sample test; 0 if there is no history
+notes: one or two sentences: why these are first-stage, and anything you are unsure about
+```
+
+Rules:
+- Use variable-name patterns exactly as the names appear above.
+- Only list data keys that exist in the data dictionary and enter the model.
+- If there is a history, the uncertain keys must be the ones the history columns describe.
+- With fewer than about 60 observations use method empirical; otherwise kmeans with n about 30.
+- Do not invent data, scenarios or probabilities.

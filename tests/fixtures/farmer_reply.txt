@@ -1,0 +1,12 @@
+```yaml
+first_stage:
+- "acres*"
+uncertain:
+- yield
+columns: {}
+scenarios:
+  method: empirical
+  seed: 0
+holdout: 0
+notes: "Planting acreage (acres_wheat, acres_corn, acres_beets) must be decided at the start of the growing season before yields are realized. Crop yields are the primary source of uncertainty; buying and selling quantities are second-stage recourse decisions made after harvest."
+```

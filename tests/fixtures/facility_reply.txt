@@ -1,0 +1,28 @@
+```yaml
+first_stage:
+- "open*"
+uncertain:
+- demand.C1
+- demand.C2
+- demand.C3
+- demand.C4
+- demand.C5
+- demand.C6
+- demand.C7
+- demand.C8
+columns:
+  demand.C1: C1
+  demand.C2: C2
+  demand.C3: C3
+  demand.C4: C4
+  demand.C5: C5
+  demand.C6: C6
+  demand.C7: C7
+  demand.C8: C8
+scenarios:
+  method: kmeans
+  n: 30
+  seed: 0
+holdout: 0.3
+notes: "Facility opening decisions (open[*]) must be made before demand is known, as they represent strategic capacity investments that cannot be reversed. Shipping and shortage quantities are recourse decisions adjusted after demand scenarios are realized."
+```

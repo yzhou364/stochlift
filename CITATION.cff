@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "StochLift: lifting deterministic optimization models to verified two-stage stochastic programs"
+type: software
+authors:
+  - family-names: Zhou
+    given-names: Yuqun
+version: 0.1.0
+date-released: 2026-09-30
+license: MIT
+keywords:
+  - stochastic programming
+  - operations research
+  - large language models

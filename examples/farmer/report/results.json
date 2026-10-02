@@ -1,0 +1,99 @@
+{
+  "results": {
+    "sense": "min",
+    "EV": -118600.0,
+    "WS": -115405.55555555555,
+    "RP": -108389.99999999999,
+    "EEV": -107239.99999999999,
+    "VSS": 1150.0,
+    "EVPI": 7015.555555555562,
+    "VSS_pct_of_RP": 1.0609834855613989,
+    "EVPI_pct_of_RP": 6.472511814333022,
+    "n_scenarios": 3,
+    "EEV_infeasible_scenarios": 0,
+    "first_stage_mean_value_solution": {
+      "acres_beets": 300.0,
+      "acres_corn": 80.0,
+      "acres_wheat": 120.0
+    },
+    "first_stage_stochastic_solution": {
+      "acres_beets": 250.0,
+      "acres_corn": 80.0,
+      "acres_wheat": 170.0
+    }
+  },
+  "checks": [
+    {
+      "name": "builder_deterministic",
+      "status": "pass",
+      "detail": "two builds from the same data give the same model"
+    },
+    {
+      "name": "uncertainty_reaches_model",
+      "status": "pass",
+      "detail": "coefficients affected: yield -> 3 matrix"
+    },
+    {
+      "name": "stage_split",
+      "status": "pass",
+      "detail": "3 first-stage and 6 recourse variables"
+    },
+    {
+      "name": "first_stage_rows_stable",
+      "status": "pass",
+      "detail": "constraints on first-stage variables only are the same in every scenario"
+    },
+    {
+      "name": "single_scenario_reduction",
+      "status": "pass",
+      "detail": "one-scenario lift = -118600, deterministic model = -118600"
+    },
+    {
+      "name": "bound_ordering",
+      "status": "pass",
+      "detail": "WS <= RP <= EEV: WS = -115406, RP = -108390, EEV = -107240"
+    },
+    {
+      "name": "decomposition_consistency",
+      "status": "pass",
+      "detail": "extensive form = -108390; re-solving each scenario with the first stage fixed gives -108390"
+    },
+    {
+      "name": "mean_value_recourse",
+      "status": "pass",
+      "detail": "the mean-value first stage is feasible in every scenario"
+    }
+  ],
+  "scenarios": {
+    "names": [
+      "yield.wheat",
+      "yield.corn",
+      "yield.beets"
+    ],
+    "probabilities": [
+      0.3333333333333333,
+      0.3333333333333333,
+      0.3333333333333333
+    ],
+    "values": [
+      [
+        3.0,
+        3.5999999999999996,
+        24.0
+      ],
+      [
+        2.5,
+        3.0,
+        20.0
+      ],
+      [
+        2.0,
+        2.4000000000000004,
+        16.0
+      ]
+    ]
+  },
+  "out_of_sample": null,
+  "stability": null,
+  "saa_gap": null
+}

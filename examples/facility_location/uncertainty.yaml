@@ -1,0 +1,11 @@
+first_stage:
+- open[*]
+uncertain:
+- demand
+columns: {}
+scenarios:
+  method: kmeans
+  n: 30
+  seed: 0
+holdout: 0.3
+notes: Sites are committed for the week before demand is known; shipping and outsourcing react to demand.
