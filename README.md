@@ -9,9 +9,12 @@ models. Python 3.10+, Windows, macOS and Linux. Not yet on PyPI.
 
 ## Why
 
-Stochastic programming tools expect you to write the stochastic model. Practitioners usually
-have something else: a deterministic model that already runs, plus a rough idea (or a history)
-of the numbers that turn out to be wrong. StochLift starts there and answers three questions:
+Stochastic programming tools expect the model in their own form: rewritten in their syntax,
+annotated with stages and random parameters, or wrapped in a scenario-creator function.
+Practitioners usually have something else: a deterministic model that already runs in PuLP,
+gurobipy, OR-Tools or Pyomo, plus a rough idea (or a history) of the numbers that turn out to
+be wrong. StochLift starts there, without annotations or changes to the model, and answers
+three questions:
 
 1. **What does the stochastic version of my model decide?** It is built from your own model,
    without rewriting it.
@@ -240,6 +243,21 @@ scripted replies. Two real replies from a language model (one per example) are s
 `tests/fixtures` and replayed; both gave a usable spec on the first attempt. That is a smoke
 test on two easy models, not a measurement of accuracy. `anthropic_llm` and `openai_llm` are
 thin wrappers that have not been run against the live APIs in this repository's tests.
+
+## How StochLift relates to other tools
+
+| | Input | Model changes needed | VSS / EVPI | Out-of-sample verdict | Checks of the lift |
+| --- | --- | --- | --- | --- | --- |
+| **StochLift** | PuLP, Pyomo, gurobipy, OR-Tools, highspy, `.lp`/`.mps` | none: the unchanged `build_model(data)` | both | paired test with bootstrap interval | 8 solver-checked invariants |
+| [mpi-sppy](https://github.com/Pyomo/mpi-sppy) | Pyomo; AMPL, GAMS, gurobipy guests (alpha); MPS + JSON; SMPS | a `scenario_creator` declaring the first stage | VSS (`--vss`) | MMW and bootstrap confidence intervals | configuration checks |
+| [StochasticPrograms.jl](https://github.com/martinbiel/StochasticPrograms.jl) | Julia | rewrite with its macros | both | SAA confidence intervals | no |
+| GAMS EMP SP, AIMMS, LINGO | their own languages | annotate random parameters and stages | LINGO: both | no | no |
+
+Use **mpi-sppy** for large models: it has decomposition (progressive hedging, Benders),
+parallel computing and a much larger set of algorithms. StochLift solves the extensive form
+directly and is meant for the step before that: finding out, from the model you already have,
+whether a stochastic model is worth building, and getting a lift you can trust. Many of its
+statistical tools (Mak-Morton-Wood gap, CVaR) are standard, and are also in mpi-sppy.
 
 ## Limitations
 
