@@ -19,12 +19,19 @@ DATA = {
 }
 
 
+def nonneg(m, name, keys=None):
+    """Non-negative variable(s); works with PuLP 2/3 and with PuLP >= 4."""
+    if hasattr(m, "add_variable"):                                # PuLP >= 4
+        return m.add_variable(name, 0) if keys is None else m.add_variable_dicts(name, keys, 0)
+    return pulp.LpVariable(name, 0) if keys is None else pulp.LpVariable.dicts(name, keys, 0)
+
+
 def build_model(data):
     m = pulp.LpProblem("farmer", pulp.LpMinimize)
-    acres = pulp.LpVariable.dicts("acres", CROPS, lowBound=0)
-    buy = pulp.LpVariable.dicts("buy", ["wheat", "corn"], lowBound=0)
-    sell = pulp.LpVariable.dicts("sell", CROPS, lowBound=0)
-    sell_excess = pulp.LpVariable("sell_beets_excess", lowBound=0)
+    acres = nonneg(m, "acres", CROPS)
+    buy = nonneg(m, "buy", ["wheat", "corn"])
+    sell = nonneg(m, "sell", CROPS)
+    sell_excess = nonneg(m, "sell_beets_excess")
 
     m += (pulp.lpSum(data["plant_cost"][c] * acres[c] for c in CROPS)
           + pulp.lpSum(data["buy_price"][c] * buy[c] for c in buy)

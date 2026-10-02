@@ -3,23 +3,23 @@
     "sense": "min",
     "EV": -118600.0,
     "WS": -115405.55555555555,
-    "RP": -108389.99999999999,
+    "RP": -108390.0,
     "EEV": -107239.99999999999,
-    "VSS": 1150.0,
-    "EVPI": 7015.555555555562,
-    "VSS_pct_of_RP": 1.0609834855613989,
-    "EVPI_pct_of_RP": 6.472511814333022,
+    "VSS": 1150.0000000000146,
+    "EVPI": 7015.5555555555475,
+    "VSS_pct_of_RP": 1.060983485561412,
+    "EVPI_pct_of_RP": 6.472511814333009,
     "n_scenarios": 3,
     "EEV_infeasible_scenarios": 0,
     "first_stage_mean_value_solution": {
-      "acres_beets": 300.0,
+      "acres_wheat": 120.0,
       "acres_corn": 80.0,
-      "acres_wheat": 120.0
+      "acres_beets": 300.0
     },
     "first_stage_stochastic_solution": {
-      "acres_beets": 250.0,
+      "acres_wheat": 170.0,
       "acres_corn": 80.0,
-      "acres_wheat": 170.0
+      "acres_beets": 250.0
     }
   },
   "checks": [

@@ -3,14 +3,15 @@ import numpy as np
 import pytest
 
 import stochlift as sl
+from conftest import pulp_var
 
 
 def newsvendor(data):
     pulp = pytest.importorskip("pulp")
     m = pulp.LpProblem("newsvendor", pulp.LpMinimize)
-    q = pulp.LpVariable("order", 0)
-    sold = pulp.LpVariable("sold", 0)
-    left = pulp.LpVariable("left", 0)
+    q = pulp_var(m, "order", 0)
+    sold = pulp_var(m, "sold", 0)
+    left = pulp_var(m, "left", 0)
     m += data["cost"] * q - data["price"] * sold - data["salvage"] * left
     m += sold <= data["demand"], "demand"
     m += sold + left == q, "balance"

@@ -6,6 +6,7 @@
 import pytest
 
 import stochlift as sl
+from conftest import pulp_var
 
 EXPECTED = 24.5
 
@@ -22,9 +23,9 @@ def _check(native):
 def test_pulp():
     pulp = pytest.importorskip("pulp")
     p = pulp.LpProblem("t", pulp.LpMaximize)
-    x = pulp.LpVariable("x", 0, 4)
-    y = pulp.LpVariable("y", 0, None, cat="Integer")
-    z = pulp.LpVariable("z", -3, 3)
+    x = pulp_var(p, "x", 0, 4)
+    y = pulp_var(p, "y", 0, None, cat="Integer")
+    z = pulp_var(p, "z", -3, 3)
     p += 3 * x + 2 * y - z + 7
     p += x + y <= 5.5, "cap"
     p += x - z >= -1, "link"
@@ -102,9 +103,9 @@ def test_scipy_backend_matches_highspy(monkeypatch):
     import stochlift.model as model
 
     p = pulp.LpProblem("t", pulp.LpMaximize)
-    x = pulp.LpVariable("x", 0, 4)
-    y = pulp.LpVariable("y", 0, None, cat="Integer")
-    z = pulp.LpVariable("z", -3, 3)
+    x = pulp_var(p, "x", 0, 4)
+    y = pulp_var(p, "y", 0, None, cat="Integer")
+    z = pulp_var(p, "z", -3, 3)
     p += 3 * x + 2 * y - z + 7
     p += x + y <= 5.5, "cap"
     p += x - z >= -1, "link"

@@ -62,7 +62,8 @@ def _from_pulp(prob) -> LinearModel:
 
     variables = prob.variables()
     names = [v.name for v in variables]
-    idx = {id(v): j for j, v in enumerate(variables)}
+    # look variables up by name: PuLP >= 4 returns a new wrapper object on every access
+    idx = {v.name: j for j, v in enumerate(variables)}
     n = len(variables)
     lb = [(-INF if v.lowBound is None else v.lowBound) for v in variables]
     ub = [(INF if v.upBound is None else v.upBound) for v in variables]
@@ -71,7 +72,7 @@ def _from_pulp(prob) -> LinearModel:
     offset = 0.0
     if prob.objective is not None:
         for v, coef in prob.objective.items():
-            c[idx[id(v)]] += coef
+            c[idx[v.name]] += coef
         offset = prob.objective.constant or 0.0
     rows, cols, vals, rl, ru, rn = [], [], [], [], [], []
     cons = prob.constraints
@@ -82,7 +83,7 @@ def _from_pulp(prob) -> LinearModel:
     for i, (name, con) in enumerate(named):
         for v, coef in con.items():
             rows.append(i)
-            cols.append(idx[id(v)])
+            cols.append(idx[v.name])
             vals.append(coef)
         rhs = -con.constant
         if con.sense == pulp.LpConstraintLE:

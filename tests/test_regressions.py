@@ -5,13 +5,14 @@ import pytest
 
 import stochlift as sl
 from stochlift.llm import parse_spec, validate
+from conftest import pulp_var
 
 
 def capacity_model(d):
     pulp = pytest.importorskip("pulp")
     m = pulp.LpProblem("p", pulp.LpMinimize)
-    x = pulp.LpVariable("cap", 0, 10)
-    y = pulp.LpVariable("buy", 0)
+    x = pulp_var(m, "cap", 0, 10)
+    y = pulp_var(m, "buy", 0)
     m += x + 5 * y
     m += x + y >= d["demand"], "meet"
     return m
@@ -80,8 +81,8 @@ def test_probe_touches_only_the_uncertain_entries():
 
     def build(d):
         m = pulp.LpProblem("p", pulp.LpMinimize)
-        x = pulp.LpVariable("cap", 0, 100)
-        ys = [pulp.LpVariable(f"buy_{t}", 0) for t in range(d["cfg"]["periods"])]
+        x = pulp_var(m, "cap", 0, 100)
+        ys = [pulp_var(m, f"buy_{t}", 0) for t in range(d["cfg"]["periods"])]
         m += x + 5 * pulp.lpSum(ys)
         for t, y in enumerate(ys):
             m += x + y >= d["cfg"]["demand"], f"meet_{t}"
@@ -103,8 +104,8 @@ def test_history_with_integer_column_labels():
 
     def build(d):
         m = pulp.LpProblem("p", pulp.LpMinimize)
-        x = pulp.LpVariable("cap", 0, 100)
-        m += x + 5 * pulp.lpSum(pulp.LpVariable(f"buy_{t}", 0) for t in range(3))
+        x = pulp_var(m, "cap", 0, 100)
+        m += x + 5 * pulp.lpSum(pulp_var(m, f"buy_{t}", 0) for t in range(3))
         for t in range(3):
             m += x + m.variablesDict()[f"buy_{t}"] >= d["demand"][t], f"meet_{t}"
         return m

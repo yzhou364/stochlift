@@ -21,8 +21,8 @@ Better forecasts are worth at most 7,015.56 (6.47% of RP): the expected value of
 
 | Variable | Mean-value model | Stochastic model |
 | --- | ---: | ---: |
-| acres_beets | 300 | 250 |
 | acres_wheat | 120 | 170 |
+| acres_beets | 300 | 250 |
 | acres_corn | 80 | 80 |
 
 2 of 3 first-stage variables differ.

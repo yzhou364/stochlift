@@ -39,3 +39,12 @@ def fixtures():
 
 def farmer_scenarios(data):
     return [(1 / 3, {"yield": {c: f * y for c, y in data["yield"].items()}}) for f in (1.2, 1.0, 0.8)]
+
+
+def pulp_var(prob, name, lb=None, ub=None, cat="Continuous"):
+    """A PuLP variable on ``prob`` that works with PuLP 2/3 (``LpVariable``) and 4 (``add_variable``)."""
+    import pulp
+
+    if hasattr(prob, "add_variable"):
+        return prob.add_variable(name, lb, ub, cat=cat)
+    return pulp.LpVariable(name, lb, ub, cat=cat)

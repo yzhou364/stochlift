@@ -4,7 +4,7 @@ import copy
 import pytest
 
 import stochlift as sl
-from conftest import farmer_scenarios
+from conftest import pulp_var, farmer_scenarios
 
 
 def _study(farmer, **kw):
@@ -39,11 +39,9 @@ def test_maximization_gives_the_same_values(farmer):
 
     def build_profit(data):
         m = farmer.build_model(data)
-        p = pulp.LpProblem("farmer_profit", pulp.LpMaximize)
-        p += -m.objective
-        for name, con in m.constraints.items():
-            p += con, name
-        return p
+        m.setObjective(-m.objective)
+        m.sense = pulp.LpMaximize
+        return m
 
     r = sl.lift(build_profit, farmer.DATA, first_stage=["acres_*"],
                 scenarios=farmer_scenarios(farmer.DATA)).solve()
@@ -85,8 +83,8 @@ def test_no_recourse_means_infinite_eev():
 
     def build(data):
         m = pulp.LpProblem("order", pulp.LpMinimize)
-        order = pulp.LpVariable("order", 0)
-        extra = pulp.LpVariable("sold", 0)
+        order = pulp_var(m, "order", 0)
+        extra = pulp_var(m, "sold", 0)
         m += 2 * order - 3 * extra
         m += order >= data["demand"], "must_cover"
         m += extra <= data["demand"], "sales"
