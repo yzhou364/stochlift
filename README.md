@@ -1,17 +1,25 @@
 # StochLift
 
 Turn the deterministic optimization model you already have into a two-stage stochastic
-program, check the result with the solver, and find out whether modeling the uncertainty
-is worth it.
+program with one command, check the result with the solver, and find out whether modeling
+the uncertainty is worth it.
 
 Status: v0.2, alpha. Two-stage stochastic programs with linear and mixed-integer linear
 models. Python 3.10+, Windows, macOS and Linux. Not yet on PyPI.
 
 ## Why
 
-Most tools that combine language models with optimization start from a text description of
-a problem. Practitioners usually start somewhere else: a deterministic model that already
-runs, plus some history of the numbers that turned out to be wrong. StochLift starts there.
+Stochastic programming tools expect you to write the stochastic model. Practitioners usually
+have something else: a deterministic model that already runs, plus a rough idea (or a history)
+of the numbers that turn out to be wrong. StochLift starts there and answers three questions:
+
+1. **What does the stochastic version of my model decide?** It is built from your own model,
+   without rewriting it.
+2. **Is the lift correct?** Eight invariants from stochastic programming theory are checked by
+   the solver. None of them needs a reference answer.
+3. **Is it worth it?** The value of the stochastic solution (VSS) and of perfect information
+   (EVPI), and an out-of-sample test on data that was not used to make the decision. If the
+   gain is not distinguishable from noise, the report says so.
 
 You keep your model exactly as it is. The only requirement is that it is built by a function
 of its data:
@@ -168,7 +176,29 @@ These checks verify that the lift is mathematically consistent with your model. 
 bound ordering holds for any split of the variables, so a wrong split passes it. A person
 must review `uncertainty.yaml`.
 
-## Letting a language model propose the spec
+## Supported modeling libraries
+
+| Library | Read from | Tested here |
+| --- | --- | --- |
+| PuLP 2, 3 and 4 | the model object | yes |
+| Pyomo | the model object (linear expressions only) | yes |
+| gurobipy | the model object | yes, with the size-limited license that ships with the package |
+| OR-Tools `pywraplp` | the model object | yes, in a separate process (see below) |
+| highspy | the `Highs` object | yes |
+| `.lp` / `.mps` file | HiGHS reader | yes |
+
+Some OR-Tools builds bundle their own HiGHS and cannot be imported in the same process as
+`highspy`. StochLift then solves with SciPy's bundled HiGHS instead. Models are read from the
+library objects, not through MPS files, because MPS writers drop the objective sense and
+constant.
+
+## Optional: a language model drafts the spec
+
+Nothing in StochLift requires a language model. Deciding what is first-stage and what is
+uncertain is usually quick for the person who knows the business, and `stochlift init` lists
+everything needed to decide. For large models with many variable groups, a language model can
+draft the spec instead (`stochlift init model.py --llm anthropic:<model id>`). Its proposal is
+checked against the real model, and a person still reviews it.
 
 ```python
 from stochlift.llm import anthropic_llm      # or openai_llm, or any callable prompt -> reply
@@ -188,22 +218,6 @@ scripted replies. Two real replies from a language model (one per example) are s
 `tests/fixtures` and replayed; both gave a usable spec on the first attempt. That is a smoke
 test on two easy models, not a measurement of accuracy. `anthropic_llm` and `openai_llm` are
 thin wrappers that have not been run against the live APIs in this repository's tests.
-
-## Supported modeling libraries
-
-| Library | Read from | Tested here |
-| --- | --- | --- |
-| PuLP 2, 3 and 4 | the model object | yes |
-| Pyomo | the model object (linear expressions only) | yes |
-| gurobipy | the model object | yes, with the size-limited license that ships with the package |
-| OR-Tools `pywraplp` | the model object | yes, in a separate process (see below) |
-| highspy | the `Highs` object | yes |
-| `.lp` / `.mps` file | HiGHS reader | yes |
-
-Some OR-Tools builds bundle their own HiGHS and cannot be imported in the same process as
-`highspy`. StochLift then solves with SciPy's bundled HiGHS instead. Models are read from the
-library objects, not through MPS files, because MPS writers drop the objective sense and
-constant.
 
 ## Limitations
 

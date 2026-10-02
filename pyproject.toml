@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stochlift"
 version = "0.2.0"
-description = "Lift a deterministic optimization model to a verified two-stage stochastic program and measure whether it is worth it."
+description = "Turn a deterministic optimization model into a verified two-stage stochastic program, and measure whether it is worth it."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "Yuqun Zhou"}]
-keywords = ["stochastic programming", "operations research", "optimization", "LLM", "uncertainty"]
+keywords = ["stochastic programming", "operations research", "optimization under uncertainty", "value of the stochastic solution", "PuLP", "Pyomo", "gurobipy"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
