@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-10-02)
 
 - Scenarios from distributions when there is no history (`scenarios.method: distribution`):
   normal, lognormal, uniform, triangular and discrete marginals relative to the values in the
