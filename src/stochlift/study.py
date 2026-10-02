@@ -60,11 +60,17 @@ class Study:
     """A deterministic model plus an uncertainty specification."""
 
     def __init__(self, build_model: Callable, data: dict, spec, scenarios=None, history=None,
-                 mip_gap: float = 1e-6, time_limit: Optional[float] = None):
+                 mip_gap: float = 1e-6, time_limit: Optional[float] = None, solver: str = "highs",
+                 n_jobs: Optional[int] = None):
         self.build_model = build_model
         self.data = data
         self.spec = Spec.load(spec)
-        self.opts = {"mip_gap": mip_gap, "time_limit": time_limit}
+        from .model import SOLVERS
+
+        if solver not in SOLVERS:
+            raise ValueError(f"solver must be one of {SOLVERS}, got {solver!r}")
+        self.opts = {"mip_gap": mip_gap, "time_limit": time_limit, "solver": solver}
+        self.n_jobs = n_jobs          # parallel scenario solves; None = up to 8 threads
         self.risk = Risk.from_spec(self.spec.risk)
         self.frontier: Optional[list] = None
         self._cache: dict = {}
@@ -228,15 +234,16 @@ class Study:
         # its coefficient is zero there); it then has no mean-value decision and is set to a default
         x_ev, missing = complete_first_stage(x_ev, models, self.is_first)
 
-        z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, risk=self.risk, **self.opts)
+        z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, risk=self.risk,
+                                                n_jobs=self.n_jobs, **self.opts)
         self.lift_notes = list(ef.notes)
         if missing:
             self.lift_notes.append(
                 f"first-stage variables {missing[:5]} do not appear in the mean-value model; the "
                 "mean-value decision sets them to 0 (or the nearest bound)")
-        ws = wait_and_see(models, **self.opts)
-        costs_ev = evaluate_first_stage(models, x_ev, self.is_first, **self.opts)
-        costs_rp = evaluate_first_stage(models, x_rp, self.is_first, **self.opts)
+        ws = wait_and_see(models, n_jobs=self.n_jobs, **self.opts)
+        costs_ev = evaluate_first_stage(models, x_ev, self.is_first, n_jobs=self.n_jobs, **self.opts)
+        costs_rp = evaluate_first_stage(models, x_rp, self.is_first, n_jobs=self.n_jobs, **self.opts)
         z_ws = self.risk.value(ws, S.probs)
         z_eev = self.risk.value(costs_ev, S.probs)
         parts = None
@@ -285,8 +292,8 @@ class Study:
             raise ValueError("no hold-out observations: set 'holdout' in the spec or pass observations")
         models = self.models(X)
         sign = models[0].sign
-        c_ev = evaluate_first_stage(models, self.results.x_ev, self.is_first, **self.opts)
-        c_rp = evaluate_first_stage(models, self.results.x_rp, self.is_first, **self.opts)
+        c_ev = evaluate_first_stage(models, self.results.x_ev, self.is_first, n_jobs=self.n_jobs, **self.opts)
+        c_rp = evaluate_first_stage(models, self.results.x_rp, self.is_first, n_jobs=self.n_jobs, **self.opts)
         both = ~np.isnan(c_ev) & ~np.isnan(c_rp)
         d = (c_ev - c_rp)[both]           # > 0: the stochastic solution is better
         rng = np.random.default_rng(seed)
@@ -341,11 +348,11 @@ class Study:
             for r in range(reps):
                 models = self.models(self._draw(n, rng))
                 z, x, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first,
-                                                 risk=self.risk, **self.opts)
+                                                 risk=self.risk, n_jobs=self.n_jobs, **self.opts)
                 sign = models[0].sign
                 row = {"n": int(n), "rep": r, "in_sample": sign * z}
                 if test_models is not None:
-                    c = evaluate_first_stage(test_models, x, self.is_first, **self.opts)
+                    c = evaluate_first_stage(test_models, x, self.is_first, n_jobs=self.n_jobs, **self.opts)
                     ok = c[~np.isnan(c)]
                     row["holdout"] = float(sign * self.risk.value(ok)) if len(ok) else float("nan")
                     row["holdout_infeasible"] = int(np.isnan(c).sum())
@@ -371,8 +378,8 @@ class Study:
         for _ in range(batches):
             models = self.models(self._draw(n, rng))
             z, _, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first,
-                                             risk=self.risk, **self.opts)
-            c = evaluate_first_stage(models, self.results.x_rp, self.is_first, **self.opts)
+                                             risk=self.risk, n_jobs=self.n_jobs, **self.opts)
+            c = evaluate_first_stage(models, self.results.x_rp, self.is_first, n_jobs=self.n_jobs, **self.opts)
             gaps.append(float(self.risk.value(c) - z))
         g = np.array(gaps)
         mean, sd = float(g.mean()), float(g.std(ddof=1)) if batches > 1 else 0.0
@@ -396,13 +403,13 @@ class Study:
         rows = []
         for w in weights:
             r = Risk(alpha=alpha, weight=float(w))
-            _, x, _ = solve_recourse_problem(models, probs, self.is_first, risk=r, **self.opts)
-            c = evaluate_first_stage(models, x, self.is_first, **self.opts)
+            _, x, _ = solve_recourse_problem(models, probs, self.is_first, risk=r, n_jobs=self.n_jobs, **self.opts)
+            c = evaluate_first_stage(models, x, self.is_first, n_jobs=self.n_jobs, **self.opts)
             row = {"weight": float(w), "alpha": alpha, "mean": sign * expected(c, probs),
                    "cvar": sign * cvar(c, probs, alpha) if not np.isnan(c).any() else sign * float("inf"),
                    "first_stage": x}
             if test_models is not None:
-                t = evaluate_first_stage(test_models, x, self.is_first, **self.opts)
+                t = evaluate_first_stage(test_models, x, self.is_first, n_jobs=self.n_jobs, **self.opts)
                 t = t[~np.isnan(t)]
                 row["holdout_mean"] = float(sign * t.mean()) if len(t) else float("nan")
                 row["holdout_cvar"] = float(sign * cvar(t, np.full(len(t), 1 / len(t)), alpha))                     if len(t) else float("nan")

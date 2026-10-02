@@ -1,6 +1,9 @@
 """WS / RP / EEV, and evaluation of a fixed first-stage decision."""
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 
 from .lift import ExtensiveForm, extensive_form
@@ -11,6 +14,21 @@ class SolveError(RuntimeError):
     pass
 
 
+def default_jobs() -> int:
+    return max(1, min(8, os.cpu_count() or 1))
+
+
+def _map(fn, items, n_jobs):
+    """``list(map(fn, items))``, on a thread pool when ``n_jobs > 1``. The solvers release
+    the GIL while they run, so threads give a real speed-up for independent solves."""
+    items = list(items)
+    n_jobs = default_jobs() if n_jobs is None else int(n_jobs)
+    if n_jobs <= 1 or len(items) <= 1:
+        return [fn(it) for it in items]
+    with ThreadPoolExecutor(min(n_jobs, len(items))) as ex:
+        return list(ex.map(fn, items))
+
+
 def first_stage_values(model: LinearModel, x: np.ndarray, is_first) -> dict:
     out = {}
     for j, nm in enumerate(model.names):
@@ -19,10 +37,13 @@ def first_stage_values(model: LinearModel, x: np.ndarray, is_first) -> dict:
     return out
 
 
-def solve_recourse_problem(models, probs, is_first, risk=None, **opts):
+def solve_recourse_problem(models, probs, is_first, risk=None, n_jobs=None, **opts):
     """Solve the extensive form. Returns (objective, first-stage dict, ExtensiveForm)."""
     ef: ExtensiveForm = extensive_form(models, probs, is_first, risk)
-    sol = solve(ef.model, **opts)
+    # HiGHS stays single-threaded so results do not depend on the machine; Gurobi is
+    # deterministic with any thread count
+    threads = (default_jobs() if n_jobs is None else max(1, int(n_jobs))) if opts.get("solver") == "gurobi" else 1
+    sol = solve(ef.model, threads=threads, **opts)
     if not sol.ok:
         raise SolveError(f"the stochastic program (extensive form) is {sol.status}"
                          f" [{sol.raw_status}]. If it is infeasible, some scenario has no "
@@ -58,22 +79,24 @@ def complete_first_stage(x_first: dict, models, is_first):
     return x, list(bounds)
 
 
-def evaluate_first_stage(models, x_first: dict, is_first=None, **opts) -> np.ndarray:
+def evaluate_first_stage(models, x_first: dict, is_first=None, n_jobs=None, **opts) -> np.ndarray:
     """Cost of each scenario when the first stage is fixed to ``x_first``.
 
     Infeasible scenarios are returned as ``nan``. When ``is_first`` is given,
     every first-stage column is fixed: one that ``x_first`` does not cover is
     set to its default value rather than left free to adapt to the scenario.
     """
-    costs = np.full(len(models), np.nan)
-    for s, m in enumerate(models):
+    def one(m):
         fixed = {}
         for j, nm in enumerate(m.names):
             if nm in x_first:
                 fixed[j] = x_first[nm]
             elif is_first is not None and is_first(nm):
                 fixed[j] = _default_value(m.lb[j], m.ub[j])
-        sol = solve(m, fixed=fixed, **opts)
+        return solve(m, fixed=fixed, **opts)
+
+    costs = np.full(len(models), np.nan)
+    for s, sol in enumerate(_map(one, models, n_jobs)):
         if sol.ok:
             costs[s] = sol.objective
         elif sol.status != "infeasible":
@@ -82,11 +105,10 @@ def evaluate_first_stage(models, x_first: dict, is_first=None, **opts) -> np.nda
     return costs
 
 
-def wait_and_see(models, **opts) -> np.ndarray:
+def wait_and_see(models, n_jobs=None, **opts) -> np.ndarray:
     """Optimal objective of each scenario solved on its own (perfect information)."""
     out = np.empty(len(models))
-    for s, m in enumerate(models):
-        sol = solve(m, **opts)
+    for s, sol in enumerate(_map(lambda m: solve(m, **opts), models, n_jobs)):
         if not sol.ok:
             raise SolveError(f"scenario {s} solved on its own is {sol.status} [{sol.raw_status}]")
         out[s] = sol.objective

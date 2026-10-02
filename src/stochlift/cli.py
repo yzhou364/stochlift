@@ -163,7 +163,7 @@ def cmd_run(args) -> int:
     from .study import lift
 
     build, data = load_model(args.model, args.data)
-    kwargs = {"mip_gap": args.mip_gap}
+    kwargs = {"mip_gap": args.mip_gap, "solver": args.solver, "n_jobs": args.jobs}
     if args.time_limit:
         kwargs["time_limit"] = args.time_limit
     study = lift(build, data, spec=args.spec, history=args.history, **kwargs)
@@ -230,6 +230,9 @@ def main(argv=None) -> int:
     q.add_argument("--frontier", metavar="WEIGHTS", help="mean-CVaR trade-off for these CVaR weights, "
                                                        "e.g. 0,0.25,0.5,0.75,1")
     q.add_argument("--alpha", type=float, help="CVaR level for --frontier (default: the spec's, or 0.9)")
+    q.add_argument("--solver", choices=["highs", "gurobi"], default="highs",
+                   help="solver for every model (gurobi needs gurobipy and a license)")
+    q.add_argument("--jobs", type=int, help="parallel scenario solves (default: CPU count, at most 8)")
     q.add_argument("--mip-gap", type=float, default=1e-6)
     q.add_argument("--time-limit", type=float, help="seconds per solve")
     q.add_argument("--no-figures", action="store_true")

@@ -119,9 +119,14 @@ def _backend() -> str:
 _BACKEND = None
 
 
+SOLVERS = ("highs", "gurobi")
+
+
 def solve(model: LinearModel, fixed: Optional[dict] = None, mip_gap: float = 1e-6,
-          time_limit: Optional[float] = None, threads: int = 1) -> Solution:
-    """Solve ``model`` with HiGHS. ``fixed`` maps column index -> value."""
+          time_limit: Optional[float] = None, threads: int = 1, solver: str = "highs") -> Solution:
+    """Solve ``model`` with HiGHS (default) or Gurobi. ``fixed`` maps column index -> value."""
+    if solver not in SOLVERS:
+        raise ValueError(f"solver must be one of {SOLVERS}, got {solver!r}")
     lb, ub = model.lb.copy(), model.ub.copy()
     if fixed:
         for j, v in fixed.items():
@@ -133,6 +138,8 @@ def solve(model: LinearModel, fixed: Optional[dict] = None, mip_gap: float = 1e-
             if v < lb[j] or v > ub[j]:
                 return Solution("infeasible", INF, None, "fixed value outside bounds")
             lb[j] = ub[j] = v
+    if solver == "gurobi":
+        return _solve_gurobi(model, lb, ub, mip_gap, time_limit, threads)
     if _backend() == "scipy":
         return _solve_scipy(model, lb, ub, mip_gap, time_limit)
     return _solve_highspy(model, lb, ub, mip_gap, time_limit, threads)
@@ -155,6 +162,50 @@ def _solve_scipy(model, lb, ub, mip_gap, time_limit) -> Solution:
     if res.status == 3:
         return Solution("unbounded", -INF, None, "scipy: unbounded")
     return Solution("other", float("nan"), None, f"scipy: {res.message}")
+
+
+def _solve_gurobi(model, lb, ub, mip_gap, time_limit, threads) -> Solution:
+    try:
+        import gurobipy as gp
+    except ImportError as e:
+        raise ImportError("solver='gurobi' needs gurobipy: pip install gurobipy") from e
+    GRB = gp.GRB
+    # one environment per solve: Gurobi environments must not be shared between threads
+    with gp.Env(params={"OutputFlag": 0}) as env, gp.Model(env=env) as g:
+        g.Params.Threads = int(threads)
+        g.Params.MIPGap = float(mip_gap)
+        g.Params.MIPGapAbs = 0.0
+        if time_limit is not None:
+            g.Params.TimeLimit = float(time_limit)
+        vtype = np.where(model.integer, GRB.INTEGER, GRB.CONTINUOUS)
+        x = g.addMVar(model.n, lb=lb, ub=ub, vtype=vtype)
+        g.setObjective(model.c @ x + float(model.offset), GRB.MINIMIZE)
+        A = model.A.tocsr()
+        lo, hi = model.row_lb, model.row_ub
+        eq = np.isfinite(lo) & (lo == hi)
+        ge = np.isfinite(lo) & ~eq
+        le = np.isfinite(hi) & ~eq
+        for mask, sense, rhs in ((eq, "=", lo), (ge, ">", lo), (le, "<", hi)):
+            if mask.any():
+                g.addMConstr(A[mask], x, sense, rhs[mask])
+        g.optimize()
+        st = g.Status
+        name = f"gurobi status {st}"
+        if st == GRB.OPTIMAL:
+            return Solution("optimal", float(g.ObjVal), np.asarray(x.X, dtype=float), name)
+        if st == GRB.INFEASIBLE:
+            return Solution("infeasible", INF, None, name)
+        if st == GRB.UNBOUNDED:
+            return Solution("unbounded", -INF, None, name)
+        if st == GRB.INF_OR_UNBD:
+            # resolve without presolve reductions to tell the two apart
+            g.Params.DualReductions = 0
+            g.optimize()
+            if g.Status == GRB.INFEASIBLE:
+                return Solution("infeasible", INF, None, name)
+            if g.Status == GRB.UNBOUNDED:
+                return Solution("unbounded", -INF, None, name)
+        return Solution("other", float("nan"), None, name)
 
 
 def _solve_highspy(model, lb, ub, mip_gap, time_limit, threads) -> Solution:
