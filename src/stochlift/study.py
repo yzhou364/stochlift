@@ -433,8 +433,8 @@ _CACHE_SIZE = 4096
 
 
 def _clamp(value: float, scale: float) -> float:
-    """VSS and EVPI are non-negative in exact arithmetic; remove round-off below zero."""
-    return 0.0 if -1e-9 * max(1.0, abs(scale)) < value < 0 else float(value)
+    """VSS and EVPI are non-negative in exact arithmetic; round-off on either side of zero is zero."""
+    return 0.0 if abs(value) < 1e-9 * max(1.0, abs(scale)) else float(value)
 
 
 def probe_paths(build_model, data, paths, is_first, rel: float = 0.1, per_leaf: bool = True,
