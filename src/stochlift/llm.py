@@ -233,8 +233,19 @@ def validate(build_model, data: dict, spec: Spec, history=None) -> list:
             except KeyError as e:
                 problems.append(str(e).strip('"'))
     method = spec.scenarios.get("method")
-    if method not in ("empirical", "kmeans", "sample", "explicit"):
+    if method not in ("empirical", "kmeans", "sample", "explicit", "distribution"):
         problems.append(f"unknown scenarios.method '{method}'")
+    if method == "distribution":
+        if history is not None:
+            problems.append("a history is given: use empirical, kmeans or sample, not distribution")
+        else:
+            from .distributions import DistributionSampler
+
+            try:
+                DistributionSampler(data, spec.scenarios.get("distributions"),
+                                    spec.scenarios.get("correlation", 0.0))
+            except (KeyError, ValueError) as e:
+                problems.append(str(e).strip('"'))
     if method in ("kmeans", "sample") and not spec.scenarios.get("n"):
         problems.append(f"scenarios.method '{method}' needs n")
     return problems

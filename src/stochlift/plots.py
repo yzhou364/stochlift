@@ -148,12 +148,12 @@ def fig_out_of_sample(study, outdir, title=True) -> str:
     ax.set_ylim(0, 1.02)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.set_yticklabels(["0%", "25%", "50%", "75%", "100%"])
-    ax.set_ylabel("Share of hold-out observations at or below")
+    ax.set_ylabel("Share of out-of-sample scenarios at or below")
     ax.set_xlabel(f"Realized {_unit(study)} per observation (marker = mean)")
     _thousands(ax)
     ax.legend(loc="lower right")
     if title:
-        ax.set_title(f"Hold-out results on {o['n_compared']} unseen observations")
+        ax.set_title(f"Out-of-sample results on {o['n_compared']} unseen scenarios")
     return _save(fig, outdir, "fig_out_of_sample")
 
 
@@ -197,12 +197,12 @@ def fig_gain(study, outdir, title=True) -> str:
             transform=ax.transAxes, ha="right", va="top", fontsize=8.5, color=INK)
     pad = 0.05 * (edges[-1] - edges[0])
     ax.set_xlim(min(edges[0], lo) - pad, max(edges[-1], hi) + pad)
-    ax.set_ylabel("Hold-out observations")
+    ax.set_ylabel("Out-of-sample scenarios")
     ax.set_xlabel("Gain from the stochastic decision, per observation")
     _thousands(ax)
     _legend_below(fig, ax)
     if title:
-        ax.set_title("Paired comparison on the hold-out set")
+        ax.set_title("Paired comparison out of sample")
     return _save(fig, outdir, "fig_gain")
 
 
@@ -293,7 +293,7 @@ def fig_stability(study, outdir, title=True) -> str:
     fig, ax = plt.subplots(figsize=(5.6, 3.4))
     series = [("in_sample", C_EV, M_EV, "In-sample optimum")]
     if has_hold:
-        series.append(("holdout", C_RP, M_RP, "Hold-out result of the same decision"))
+        series.append(("holdout", C_RP, M_RP, "Out-of-sample result of the same decision"))
     xs = np.arange(len(sizes))
     dodge = 0.07 if len(series) > 1 else 0.0
     for k, (key, color, marker, label) in enumerate(series):

@@ -35,6 +35,12 @@ def review_text(study) -> str:
     if study.train is not None:
         n_test = 0 if study.test is None else len(study.test)
         lines.append(f"History: {len(study.train)} observations for scenarios, {n_test} held out")
+    if study.sampler is not None:
+        n_test = 0 if study.test is None else len(study.test)
+        lines.append(f"Scenarios sampled from distributions (correlation {study.sampler.correlation:g}); "
+                     f"{n_test} independent samples kept for the out-of-sample test:")
+        for item in study.sampler.describe()[:12]:
+            lines.append(f"  {item}")
     lines += ["", "Where the uncertain data enters the model:"]
     for k, d in study.probe_uncertain().items():
         if d.get("error"):
@@ -65,7 +71,7 @@ def verdict(study) -> str:
         return ("**Yes, on the scenario set.** " + in_sample + " There is no hold-out data, so this "
                 "has not been tested on observations outside the scenario set.")
     lo, hi = o["gain_ci95"]
-    test = (f"On {o['n_compared']} held-out observations the mean gain is {_fmt(o['mean_gain'])} "
+    test = (f"On {o['n_compared']} {o.get('source', 'held-out observations')} the mean gain is {_fmt(o['mean_gain'])} "
             f"(95% interval {_fmt(lo)} to {_fmt(hi)}).")
     if lo > 0:
         return "**Yes.** " + in_sample + " " + test
@@ -109,8 +115,8 @@ def summary_markdown(study) -> str:
     if study.oos:
         o = study.oos
         L += ["## Out-of-sample test", "",
-              f"Both decisions were applied to {o['n']} held-out observations that were not used to "
-              "build the scenarios.", "",
+              f"Both decisions were applied to {o['n']} {o.get('source', 'held-out observations')} "
+              "that were not used to build the scenarios.", "",
               f"- Mean {unit}: mean-value decision {_fmt(o['mean_ev'])}, stochastic decision {_fmt(o['mean_rp'])}.",
               f"- Mean gain of the stochastic decision: {_fmt(o['mean_gain'])} per observation, "
               f"95% bootstrap interval [{_fmt(o['gain_ci95'][0])}, {_fmt(o['gain_ci95'][1])}].",

@@ -70,7 +70,9 @@ class Study:
         self.stability_table: Optional[list] = None
         self.gap: Optional[dict] = None
         self.lift_notes: list = []
+        self.sampler = None           # set when scenarios are drawn from distributions
 
+        method = self.spec.scenarios.get("method", "empirical")
         if scenarios is not None:
             if not isinstance(scenarios, sc.ScenarioSet):
                 scenarios = sc.explicit(data, scenarios)
@@ -79,9 +81,15 @@ class Study:
             if not self.spec.uncertain:
                 self.spec.uncertain = list(scenarios.names)
             self.spec.scenarios = {"method": "explicit", "n": len(scenarios)}
+        elif method == "distribution":
+            if history is not None:
+                raise ValueError("scenarios.method 'distribution' does not use a history; "
+                                 "remove history=... or choose empirical, sample or kmeans")
+            self._init_distribution()
         else:
             if history is None:
-                raise ValueError("give either explicit scenarios or a history of observations")
+                raise ValueError("no source of scenarios: pass scenarios=..., a history=..., or set "
+                                 "scenarios.method to 'distribution' in the spec")
             if not self.spec.uncertain:
                 raise ValueError("the spec lists no uncertain data keys")
             self.paths = du.expand_keys(data, self.spec.uncertain)
@@ -91,6 +99,35 @@ class Study:
             s = self.spec.scenarios
             self.scenarios = sc.from_history(self.train, self.paths, method=s.get("method", "empirical"),
                                              n=s.get("n"), seed=int(s.get("seed", 0)))
+
+    def _init_distribution(self):
+        from .distributions import DistributionSampler
+
+        s = self.spec.scenarios
+        self.sampler = DistributionSampler(self.data, s.get("distributions"), s.get("correlation", 0.0))
+        if self.spec.uncertain:
+            missing = [du.leaf_name(p) for p in du.expand_keys(self.data, self.spec.uncertain)
+                       if p not in self.sampler.paths]
+            if missing:
+                raise ValueError(f"uncertain entries {missing[:6]} have no distribution under "
+                                 "scenarios.distributions")
+        else:
+            self.spec.uncertain = [str(k) for k in s["distributions"]]
+        self.paths = list(self.sampler.paths)
+        seed = int(s.get("seed", 0))
+        n = int(s.get("n", 100))
+        self.scenarios = sc.ScenarioSet(self.paths, self.sampler.sample(n, np.random.default_rng(seed)),
+                                        np.full(n, 1.0 / n))
+        # an independent sample plays the role of the hold-out period
+        n_test = int(s.get("n_test", 500))
+        self.test = self.sampler.sample(n_test, np.random.default_rng(seed + 1)) if n_test else None
+
+    def _draw(self, n: int, rng) -> np.ndarray:
+        """``n`` equally likely realisations from the reference distribution."""
+        if self.sampler is not None:
+            return self.sampler.sample(n, rng)
+        pool, w = self._sample_pool()
+        return pool[rng.choice(len(pool), size=n, replace=True, p=w)]
 
     # ------------------------------------------------------------------ building
     def _load_history(self, history) -> np.ndarray:
@@ -129,6 +166,8 @@ class Study:
         key = values.tobytes()
         if key not in self._cache:
             data = du.apply(self.data, self.paths, values)
+            if len(self._cache) >= _CACHE_SIZE:      # sampled scenarios are rarely rebuilt: drop the oldest
+                self._cache.pop(next(iter(self._cache)))
             self._cache[key] = to_linear_model(self.build_model(data))
         return self._cache[key]
 
@@ -216,7 +255,11 @@ class Study:
 
     # ------------------------------------------------------------- out of sample
     def out_of_sample(self, observations=None, n_boot: int = 10000, seed: int = 0) -> dict:
-        """Apply both first-stage decisions to observations that were not used to build scenarios."""
+        """Apply both first-stage decisions to observations that were not used to build scenarios.
+
+        These are the held-out rows of the history, an independent sample when the
+        scenarios come from distributions, or ``observations`` when given.
+        """
         if self.results is None:
             self.solve()
         X = self.test if observations is None else self._observations(observations)
@@ -243,6 +286,9 @@ class Study:
             "share_rp_better": float((d > 1e-9).mean()) if len(d) else float("nan"),
             "share_ev_better": float((d < -1e-9).mean()) if len(d) else float("nan"),
             "costs_ev": sign * c_ev, "costs_rp": sign * c_rp,
+            "source": ("given observations" if observations is not None else
+                       "independent samples from the distributions" if self.sampler is not None
+                       else "held-out observations"),
         }
         return self.oos
 
@@ -258,14 +304,12 @@ class Study:
         Reports the spread of the in-sample optimum and, when a hold-out set
         exists, the hold-out result of each sampled solution.
         """
-        pool, w = self._sample_pool()
         rng = np.random.default_rng(seed)
         test_models = self.models(self.test) if self.test is not None else None
         rows = []
         for n in sizes:
             for r in range(reps):
-                idx = rng.choice(len(pool), size=n, replace=True, p=w)
-                models = self.models(pool[idx])
+                models = self.models(self._draw(n, rng))
                 z, x, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first, **self.opts)
                 sign = models[0].sign
                 row = {"n": int(n), "rep": r, "in_sample": sign * z}
@@ -280,8 +324,8 @@ class Study:
     def saa_gap(self, n: int = 50, batches: int = 20, seed: int = 0) -> dict:
         """Optimality-gap estimate for the stochastic solution (Mak, Morton and Wood, 1999).
 
-        The reference distribution is the empirical distribution of the
-        training history (or the scenario set when there is no history).
+        The reference distribution is the specified distributions, the empirical
+        distribution of the training history, or the scenario set, in that order.
         Each batch draws ``n`` scenarios and measures how much worse the
         solution is than the batch optimum; the mean over batches estimates
         an upper bound on the true gap.
@@ -290,12 +334,10 @@ class Study:
 
         if self.results is None:
             self.solve()
-        pool, w = self._sample_pool()
         rng = np.random.default_rng(seed)
         gaps = []
         for _ in range(batches):
-            idx = rng.choice(len(pool), size=n, replace=True, p=w)
-            models = self.models(pool[idx])
+            models = self.models(self._draw(n, rng))
             z, _, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first, **self.opts)
             c = evaluate_first_stage(models, self.results.x_rp, self.is_first, **self.opts)
             gaps.append(float("inf") if np.isnan(c).any() else float(c.mean() - z))
@@ -323,6 +365,9 @@ class Study:
         if not self.checks:
             self.check()
         return write_report(self, outdir, figures=figures)
+
+
+_CACHE_SIZE = 4096
 
 
 def _clamp(value: float, scale: float) -> float:
