@@ -1,5 +1,8 @@
 # StochLift
 
+[![tests](https://github.com/yzhou364/stochlift/actions/workflows/tests.yml/badge.svg)](https://github.com/yzhou364/stochlift/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Turn the deterministic optimization model you already have into a two-stage stochastic
 program with one command, check the result with the solver, and find out whether modeling
 the uncertainty is worth it.
@@ -42,7 +45,7 @@ enter the model.
 ## Install
 
 ```bash
-git clone <your fork> && cd stochlift
+git clone https://github.com/yzhou364/stochlift.git && cd stochlift
 pip install -e ".[pulp,pyomo]"
 pytest
 ```

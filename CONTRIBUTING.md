@@ -12,7 +12,7 @@ examples or part of the benchmark.
 ## Development setup
 
 ```bash
-git clone <repository url> && cd stochlift
+git clone https://github.com/yzhou364/stochlift.git && cd stochlift
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 pytest

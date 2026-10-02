@@ -6,6 +6,7 @@ authors:
   - family-names: Zhou
     given-names: Yuqun
 version: 0.2.0
+repository-code: "https://github.com/yzhou364/stochlift"
 date-released: 2026-09-30
 license: MIT
 keywords:
