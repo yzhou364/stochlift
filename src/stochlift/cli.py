@@ -199,6 +199,22 @@ def cmd_run(args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    from .export import write_module
+    from .study import lift
+
+    build, data = load_model(args.model, args.data)
+    study = lift(build, data, spec=args.spec, history=args.history)
+    study.to_mpisppy()                       # fail here, not inside mpi-sppy
+    path = write_module(args.output, args.model, args.spec, args.data, args.history,
+                        n=len(study.scenarios), sign=study.mean_model().sign)
+    module = os.path.splitext(os.path.basename(path))[0]
+    print(f"wrote {path} ({len(study.scenarios)} scenarios). From its folder, for example:\n"
+          f"  python -m mpisppy.generic_cylinders --module-name {module} --num-scens "
+          f"{len(study.scenarios)} --EF-solver-name appsi_highs --EF")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="stochlift", description=(
         "Lift a deterministic optimization model to a two-stage stochastic program and measure "
@@ -239,6 +255,12 @@ def main(argv=None) -> int:
     q.add_argument("--no-out-of-sample", action="store_true")
     q.add_argument("-q", "--quiet", action="store_true", help="do not print the review")
     q.set_defaults(func=cmd_run)
+
+    q = sub.add_parser("export", help="write a scenario module for mpi-sppy (decomposition for large models)")
+    common(q)
+    q.add_argument("--spec", default="uncertainty.yaml")
+    q.add_argument("-o", "--output", default="stochlift_scenarios.py")
+    q.set_defaults(func=cmd_export)
 
     args = p.parse_args(argv)
     return args.func(args)

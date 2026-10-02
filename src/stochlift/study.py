@@ -417,6 +417,13 @@ class Study:
         self.frontier = rows
         return rows
 
+    # -------------------------------------------------------------------- export
+    def to_mpisppy(self) -> dict:
+        """Scenario names and a ``scenario_creator`` for mpi-sppy (see :mod:`stochlift.export`)."""
+        from .export import to_mpisppy
+
+        return to_mpisppy(self)
+
     # -------------------------------------------------------------------- output
     def review(self, show: bool = True) -> str:
         from .report import review_text
