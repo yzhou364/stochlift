@@ -4,15 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stochlift"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lift a deterministic optimization model to a verified two-stage stochastic program and measure whether it is worth it."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "Yuqun Zhou"}]
 keywords = ["stochastic programming", "operations research", "optimization", "LLM", "uncertainty"]
 classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
   "License :: OSI Approved :: MIT License",
   "Topic :: Scientific/Engineering :: Mathematics",
 ]
@@ -29,6 +33,7 @@ ortools = ["ortools>=9.8"]
 anthropic = ["anthropic"]
 openai = ["openai"]
 dev = ["pytest", "pulp", "pyomo"]
+all = ["pulp>=2.7", "pyomo>=6.6", "anthropic", "openai"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
