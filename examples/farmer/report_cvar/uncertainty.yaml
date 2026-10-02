@@ -1,0 +1,21 @@
+first_stage:
+- acres_*
+uncertain:
+- yield
+columns: {}
+scenarios:
+  method: distribution
+  n: 100
+  n_test: 500
+  seed: 0
+  correlation: 0.8
+  distributions:
+    yield:
+      dist: normal
+      cv: 0.15
+      min: 0
+holdout: 0.0
+risk:
+  alpha: 0.9
+  weight: 0.5
+notes: Risk-averse version of uncertainty_distribution.yaml.

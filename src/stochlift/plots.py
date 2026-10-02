@@ -310,12 +310,53 @@ def fig_stability(study, outdir, title=True) -> str:
     ax.yaxis.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(f"Scenarios per sampled set ({reps} sets each; bars show the range)")
-    ax.set_ylabel(f"Expected {_unit(study)}")
+    ax.set_ylabel(f"Expected {_unit(study)}" if not study.risk.active else "Risk-adjusted objective")
     _thousands(ax, "y")
     _legend_below(fig, ax)
     if title:
         ax.set_title("Stability across resampled scenario sets")
     return _save(fig, outdir, "fig_stability")
+
+
+# ----------------------------------------------------------------------------- 7
+def fig_risk_frontier(study, outdir, title=True) -> str:
+    """Expected outcome against CVaR as the weight on CVaR grows."""
+    from .risk import cvar
+
+    plt = _plt()
+    rows = study.frontier
+    a = rows[0]["alpha"]
+    unit = _unit(study)
+    fig, ax = plt.subplots(figsize=(5.6, 3.6))
+    x = [r["cvar"] for r in rows]
+    y = [r["mean"] for r in rows]
+    ax.plot(x, y, color=C_RP, lw=2, marker=M_RP, ms=7, mec="white", mew=1.5,
+            label="Stochastic decision, by CVaR weight", solid_joinstyle="round")
+    for r in rows:
+        ax.annotate(f"{r['weight']:g}", (r["cvar"], r["mean"]), textcoords="offset points", xytext=(6, 5),
+                    fontsize=8, color=INK2)
+    if "holdout_mean" in rows[0]:
+        ax.plot([r["holdout_cvar"] for r in rows], [r["holdout_mean"] for r in rows], color=C_RP, lw=1.2,
+                ls="--", marker=M_RP, ms=6, mfc="white", mec=C_RP, mew=1.2,
+                label="Same decisions, out of sample")
+    res = study.results
+    c_ev = res.scenario_costs_ev
+    if c_ev is not None and np.isfinite(c_ev).all():
+        sign = -1.0 if res.sense == "max" else 1.0
+        internal = sign * c_ev
+        ax.plot([sign * cvar(internal, study.scenarios.probs, a)], [sign * float(study.scenarios.probs @ internal)],
+                ls="none", marker=M_EV, ms=8, color=C_EV, mec="white", mew=1.5, label=L_EV)
+    ax.yaxis.grid(True)
+    ax.set_axisbelow(True)
+    worst = "highest costs" if res.sense == "min" else "lowest values"
+    ax.set_xlabel(f"CVaR at {a:g}: mean of the {100 * (1 - a):g}% {worst}")
+    ax.set_ylabel(f"Expected {unit}")
+    _thousands(ax, "x")
+    _thousands(ax, "y")
+    _legend_below(fig, ax, ncol=2)
+    if title:
+        ax.set_title("Mean-risk trade-off (labels: weight on CVaR)")
+    return _save(fig, outdir, "fig_risk_frontier")
 
 
 def make_figures(study, outdir, title=True) -> list:
@@ -325,4 +366,6 @@ def make_figures(study, outdir, title=True) -> list:
         made += [fig_out_of_sample(study, outdir, title), fig_gain(study, outdir, title)]
     if study.stability_table:
         made.append(fig_stability(study, outdir, title))
+    if study.frontier:
+        made.append(fig_risk_frontier(study, outdir, title))
     return made

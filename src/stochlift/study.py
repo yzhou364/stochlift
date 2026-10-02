@@ -15,6 +15,7 @@ from .evaluate import (SolveError, complete_first_stage, evaluate_first_stage, e
                        solve_recourse_problem, wait_and_see)
 from .lift import first_stage_names
 from .model import LinearModel, solve
+from .risk import Risk
 from .spec import Spec
 
 
@@ -34,6 +35,8 @@ class Results:
     scenario_costs_ev: np.ndarray = field(repr=False, default=None)
     scenario_costs_rp: np.ndarray = field(repr=False, default=None)
     scenario_costs_ws: np.ndarray = field(repr=False, default=None)
+    objective: str = "expected cost"   # what EV, WS, RP and EEV measure
+    risk_parts: dict = field(default=None)   # with a risk measure: mean and CVaR of WS, RP, EEV
 
     @property
     def vss_pct(self) -> float:
@@ -48,6 +51,7 @@ class Results:
                 "EEV": self.eev, "VSS": self.vss, "EVPI": self.evpi,
                 "VSS_pct_of_RP": self.vss_pct, "EVPI_pct_of_RP": self.evpi_pct,
                 "n_scenarios": self.n_scenarios, "EEV_infeasible_scenarios": self.eev_infeasible,
+                "objective": self.objective, "risk_parts": self.risk_parts,
                 "first_stage_mean_value_solution": self.x_ev,
                 "first_stage_stochastic_solution": self.x_rp}
 
@@ -61,6 +65,8 @@ class Study:
         self.data = data
         self.spec = Spec.load(spec)
         self.opts = {"mip_gap": mip_gap, "time_limit": time_limit}
+        self.risk = Risk.from_spec(self.spec.risk)
+        self.frontier: Optional[list] = None
         self._cache: dict = {}
         self.train = self.test = None
         self.history_columns = None
@@ -222,7 +228,7 @@ class Study:
         # its coefficient is zero there); it then has no mean-value decision and is set to a default
         x_ev, missing = complete_first_stage(x_ev, models, self.is_first)
 
-        z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, **self.opts)
+        z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, risk=self.risk, **self.opts)
         self.lift_notes = list(ef.notes)
         if missing:
             self.lift_notes.append(
@@ -231,8 +237,19 @@ class Study:
         ws = wait_and_see(models, **self.opts)
         costs_ev = evaluate_first_stage(models, x_ev, self.is_first, **self.opts)
         costs_rp = evaluate_first_stage(models, x_rp, self.is_first, **self.opts)
-        z_ws = float(S.probs @ ws)
-        z_eev = expected(costs_ev, S.probs)
+        z_ws = self.risk.value(ws, S.probs)
+        z_eev = self.risk.value(costs_ev, S.probs)
+        parts = None
+        if self.risk.active:
+            from .risk import cvar
+
+            def split(costs):
+                if np.isnan(costs).any():
+                    return {"mean": float("inf") * sign, "cvar": float("inf") * sign}
+                return {"mean": sign * expected(costs, S.probs),
+                        "cvar": sign * cvar(costs, S.probs, self.risk.alpha)}
+
+            parts = {"WS": split(ws), "RP": split(costs_rp), "EEV": split(costs_ev)}
 
         self.results = Results(
             sense="min" if sign > 0 else "max", ev=sign * ev_sol.objective, ws=sign * z_ws,
@@ -240,7 +257,8 @@ class Study:
             x_ev=x_ev, x_rp=x_rp, n_scenarios=len(S),
             eev_infeasible=int(np.isnan(costs_ev).sum()),
             scenario_costs_ev=sign * costs_ev, scenario_costs_rp=sign * costs_rp,
-            scenario_costs_ws=sign * ws)
+            scenario_costs_ws=sign * ws,
+            objective=self.risk.describe("min" if sign > 0 else "max"), risk_parts=parts)
         self._internal = {"z_rp": z_rp, "z_ws": z_ws, "z_eev": z_eev, "z_ev": ev_sol.objective,
                           "costs_rp": costs_rp, "sign": sign}
         return self.results
@@ -273,10 +291,21 @@ class Study:
         d = (c_ev - c_rp)[both]           # > 0: the stochastic solution is better
         rng = np.random.default_rng(seed)
         if len(d) > 1:
-            boot = d[rng.integers(0, len(d), size=(n_boot, len(d)))].mean(axis=1)
+            idx = rng.integers(0, len(d), size=(n_boot, len(d)))
+            boot = d[idx].mean(axis=1)
             ci = [float(np.quantile(boot, 0.025)), float(np.quantile(boot, 0.975))]
         else:
-            ci = [float("nan"), float("nan")]
+            idx, ci = None, [float("nan"), float("nan")]
+        risk = {}
+        if self.risk.active and both.any():
+            a, b = c_ev[both], c_rp[both]
+            gain = float(self.risk.value(a) - self.risk.value(b))
+            rci = [float("nan"), float("nan")]
+            if idx is not None:
+                rb = self.risk.values_equal_weights(a[idx]) - self.risk.values_equal_weights(b[idx])
+                rci = [float(np.quantile(rb, 0.025)), float(np.quantile(rb, 0.975))]
+            risk = {"risk_ev": float(sign * self.risk.value(a)), "risk_rp": float(sign * self.risk.value(b)),
+                    "risk_gain": gain, "risk_gain_ci95": rci}
         self.oos = {
             "n": int(len(X)), "n_feasible_ev": int((~np.isnan(c_ev)).sum()),
             "n_feasible_rp": int((~np.isnan(c_rp)).sum()), "n_compared": int(both.sum()),
@@ -289,6 +318,7 @@ class Study:
             "source": ("given observations" if observations is not None else
                        "independent samples from the distributions" if self.sampler is not None
                        else "held-out observations"),
+            **risk,
         }
         return self.oos
 
@@ -310,12 +340,14 @@ class Study:
         for n in sizes:
             for r in range(reps):
                 models = self.models(self._draw(n, rng))
-                z, x, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first, **self.opts)
+                z, x, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first,
+                                                 risk=self.risk, **self.opts)
                 sign = models[0].sign
                 row = {"n": int(n), "rep": r, "in_sample": sign * z}
                 if test_models is not None:
                     c = evaluate_first_stage(test_models, x, self.is_first, **self.opts)
-                    row["holdout"] = float(sign * np.nanmean(c)) if not np.isnan(c).all() else float("nan")
+                    ok = c[~np.isnan(c)]
+                    row["holdout"] = float(sign * self.risk.value(ok)) if len(ok) else float("nan")
                     row["holdout_infeasible"] = int(np.isnan(c).sum())
                 rows.append(row)
         self.stability_table = rows
@@ -338,15 +370,45 @@ class Study:
         gaps = []
         for _ in range(batches):
             models = self.models(self._draw(n, rng))
-            z, _, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first, **self.opts)
+            z, _, _ = solve_recourse_problem(models, np.full(n, 1.0 / n), self.is_first,
+                                             risk=self.risk, **self.opts)
             c = evaluate_first_stage(models, self.results.x_rp, self.is_first, **self.opts)
-            gaps.append(float("inf") if np.isnan(c).any() else float(c.mean() - z))
+            gaps.append(float(self.risk.value(c) - z))
         g = np.array(gaps)
         mean, sd = float(g.mean()), float(g.std(ddof=1)) if batches > 1 else 0.0
         upper = mean + stats.t.ppf(0.95, batches - 1) * sd / np.sqrt(batches) if batches > 1 else mean
         self.gap = {"n": n, "batches": batches, "mean_gap": mean, "upper95": float(upper),
                     "pct_of_RP": 100.0 * float(upper) / abs(self.results.rp) if self.results.rp else float("nan")}
         return self.gap
+
+    # ---------------------------------------------------------------------- risk
+    def risk_frontier(self, weights=(0.0, 0.25, 0.5, 0.75, 0.9, 1.0), alpha: float = None) -> list:
+        """Mean-CVaR trade-off: solve with each CVaR weight and report the expected
+        cost and the CVaR of the resulting decision on the scenario set (and out of
+        sample when there is a hold-out set)."""
+        from .risk import cvar
+
+        alpha = self.risk.alpha if alpha is None else float(alpha)
+        models = self.models()
+        probs = self.scenarios.probs
+        test_models = self.models(self.test) if self.test is not None else None
+        sign = models[0].sign
+        rows = []
+        for w in weights:
+            r = Risk(alpha=alpha, weight=float(w))
+            _, x, _ = solve_recourse_problem(models, probs, self.is_first, risk=r, **self.opts)
+            c = evaluate_first_stage(models, x, self.is_first, **self.opts)
+            row = {"weight": float(w), "alpha": alpha, "mean": sign * expected(c, probs),
+                   "cvar": sign * cvar(c, probs, alpha) if not np.isnan(c).any() else sign * float("inf"),
+                   "first_stage": x}
+            if test_models is not None:
+                t = evaluate_first_stage(test_models, x, self.is_first, **self.opts)
+                t = t[~np.isnan(t)]
+                row["holdout_mean"] = float(sign * t.mean()) if len(t) else float("nan")
+                row["holdout_cvar"] = float(sign * cvar(t, np.full(len(t), 1 / len(t)), alpha))                     if len(t) else float("nan")
+            rows.append(row)
+        self.frontier = rows
+        return rows
 
     # -------------------------------------------------------------------- output
     def review(self, show: bool = True) -> str:

@@ -180,6 +180,8 @@ def cmd_run(args) -> int:
         study.stability(sizes=[int(s) for s in args.stability.split(",")], reps=args.reps)
     if args.gap:
         study.saa_gap(n=args.gap, batches=args.batches)
+    if args.frontier:
+        study.risk_frontier(weights=[float(w) for w in args.frontier.split(",")], alpha=args.alpha)
     path = study.report(args.out, figures=not args.no_figures)
     print(f"\nRP {r.rp:,.6g}  EEV {r.eev:,.6g}  WS {r.ws:,.6g}  VSS {r.vss:,.6g} "
           f"({r.vss_pct:.2f}%)  EVPI {r.evpi:,.6g} ({r.evpi_pct:.2f}%)")
@@ -187,6 +189,9 @@ def cmd_run(args) -> int:
         o = study.oos
         print(f"out of sample ({o['n_compared']} {o['source']}): mean gain {o['mean_gain']:,.6g}, "
               f"95% interval [{o['gain_ci95'][0]:,.6g}, {o['gain_ci95'][1]:,.6g}]")
+        if "risk_gain" in o:
+            print(f"  risk-adjusted gain {o['risk_gain']:,.6g}, 95% interval "
+                  f"[{o['risk_gain_ci95'][0]:,.6g}, {o['risk_gain_ci95'][1]:,.6g}] ({r.objective})")
     print(f"report: {path}")
     if not all_passed(checks):
         print("some checks FAILED; see the report before using these results", file=sys.stderr)
@@ -222,6 +227,9 @@ def main(argv=None) -> int:
     q.add_argument("--reps", type=int, default=10, help="samples per size for --stability")
     q.add_argument("--gap", type=int, metavar="N", help="estimate the optimality gap with batches of N")
     q.add_argument("--batches", type=int, default=20)
+    q.add_argument("--frontier", metavar="WEIGHTS", help="mean-CVaR trade-off for these CVaR weights, "
+                                                       "e.g. 0,0.25,0.5,0.75,1")
+    q.add_argument("--alpha", type=float, help="CVaR level for --frontier (default: the spec's, or 0.9)")
     q.add_argument("--mip-gap", type=float, default=1e-6)
     q.add_argument("--time-limit", type=float, help="seconds per solve")
     q.add_argument("--no-figures", action="store_true")

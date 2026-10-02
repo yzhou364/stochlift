@@ -15,6 +15,7 @@ class Spec:
     columns: dict = field(default_factory=dict)     # leaf name -> history column
     scenarios: dict = field(default_factory=lambda: {"method": "empirical"})
     holdout: float = 0.0                   # share of history (last rows) kept for testing
+    risk: dict = field(default_factory=dict)        # {alpha, weight}: mean-CVaR objective
     notes: str = ""
 
     def __post_init__(self):
@@ -30,6 +31,10 @@ class Spec:
             raise ValueError("holdout must be in [0, 1)")
         self.scenarios = dict(self.scenarios or {"method": "empirical"})
         self.scenarios.setdefault("method", "empirical")
+        self.risk = dict(self.risk or {})
+        from .risk import Risk
+
+        Risk.from_spec(self.risk)          # validate early
 
     def is_first_stage(self, name: str) -> bool:
         """Match ``name`` against the patterns. Only ``*`` and ``?`` are wildcards,
@@ -42,7 +47,10 @@ class Spec:
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        return {k: d[k] for k in ("first_stage", "uncertain", "columns", "scenarios", "holdout", "notes")}
+        keys = ["first_stage", "uncertain", "columns", "scenarios", "holdout", "risk", "notes"]
+        if not d["risk"]:
+            keys.remove("risk")
+        return {k: d[k] for k in keys}
 
     def to_yaml(self) -> str:
         return yaml.safe_dump(self.to_dict(), sort_keys=False, allow_unicode=True)
@@ -53,7 +61,7 @@ class Spec:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Spec":
-        known = {"first_stage", "uncertain", "columns", "scenarios", "holdout", "notes"}
+        known = {"first_stage", "uncertain", "columns", "scenarios", "holdout", "risk", "notes"}
         unknown = set(d) - known
         if unknown:
             raise ValueError(f"unknown spec fields: {sorted(unknown)}; allowed: {sorted(known)}")

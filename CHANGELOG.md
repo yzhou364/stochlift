@@ -7,6 +7,10 @@
   data, optional clipping, and a common correlation through a Gaussian copula. Out-of-sample
   tests, stability runs and the optimality-gap estimate draw fresh independent samples.
   `stochlift.sample()` builds a scenario set directly.
+- Mean-CVaR objectives (`risk: {alpha, weight}` in the spec), linearized in the extensive form.
+  WS, RP and EEV use the same objective, so the checks still apply; the out-of-sample test adds
+  the risk-adjusted gain with a bootstrap interval. `risk_frontier()` / `--frontier` traces the
+  trade-off between expected cost and CVaR, with a new figure.
 - Command line: `stochlift init` writes a commented spec template from the model (or asks a
   language model with `--llm`); `stochlift run` solves, checks and writes the report, and exits
   with status 1 when a check fails.

@@ -64,15 +64,22 @@ def verdict(study) -> str:
     if r.vss <= 1e-6 * max(1.0, abs(r.rp)):
         return ("**No.** On these scenarios the deterministic (mean-value) decision is already "
                 "optimal for the stochastic model (VSS = 0). Keep the deterministic model.")
+    how = "in expectation" if r.risk_parts is None else f"in the objective ({r.objective})"
     in_sample = (f"On the scenario set the stochastic decision is better by {_fmt(r.vss)} per decision "
-                 f"in expectation ({r.vss_pct:.2f}% of RP); this is the value of the stochastic "
+                 f"{how} ({r.vss_pct:.2f}% of RP); this is the value of the stochastic "
                  "solution (VSS).")
     if not o or o["n_compared"] < 2:
         return ("**Yes, on the scenario set.** " + in_sample + " There is no hold-out data, so this "
                 "has not been tested on observations outside the scenario set.")
-    lo, hi = o["gain_ci95"]
-    test = (f"On {o['n_compared']} {o.get('source', 'held-out observations')} the mean gain is {_fmt(o['mean_gain'])} "
-            f"(95% interval {_fmt(lo)} to {_fmt(hi)}).")
+    if "risk_gain" in o:
+        lo, hi = o["risk_gain_ci95"]
+        test = (f"On {o['n_compared']} {o.get('source', 'held-out observations')} the same "
+                f"objective improves by {_fmt(o['risk_gain'])} "
+                f"(95% interval {_fmt(lo)} to {_fmt(hi)}); the mean gain is {_fmt(o['mean_gain'])}.")
+    else:
+        lo, hi = o["gain_ci95"]
+        test = (f"On {o['n_compared']} {o.get('source', 'held-out observations')} the mean gain is "
+                f"{_fmt(o['mean_gain'])} (95% interval {_fmt(lo)} to {_fmt(hi)}).")
     if lo > 0:
         return "**Yes.** " + in_sample + " " + test
     if hi < 0:
@@ -86,20 +93,42 @@ def summary_markdown(study) -> str:
     r = study.results
     better = "lower" if r.sense == "min" else "higher"
     unit = "cost" if r.sense == "min" else "value"
+    col = "Expected " + unit if r.risk_parts is None else "Objective"
     L = ["# StochLift report", "",
-         f"Objective sense: **{r.sense}** ({better} is better). Scenarios: **{r.n_scenarios}**.", "",
+         f"Objective sense: **{r.sense}** ({better} is better). Scenarios: **{r.n_scenarios}**.", ""]
+    if r.risk_parts is not None:
+        L += [f"Risk-averse objective: **{r.objective}**. EV, WS, RP and EEV below are values of "
+              "this objective, so VSS and EVPI are risk-adjusted too.", ""]
+    L += [
          "## Is modeling the uncertainty worth it?", ""]
     L.append(verdict(study))
     L += ["",
           f"Better forecasts are worth at most {_fmt(r.evpi)} ({r.evpi_pct:.2f}% of RP): "
           "the expected value of perfect information (EVPI).", "",
-          "| Quantity | Meaning | Expected " + unit + " |", "| --- | --- | ---: |",
+          f"| Quantity | Meaning | {col} |", "| --- | --- | ---: |",
           f"| EV | deterministic model at mean data (its own, optimistic estimate) | {_fmt(r.ev)} |",
           f"| WS | wait-and-see: each scenario solved with perfect information | {_fmt(r.ws)} |",
           f"| RP | stochastic (recourse) solution | {_fmt(r.rp)} |",
           f"| EEV | the mean-value decision evaluated over the scenarios | {_fmt(r.eev)} |",
           f"| VSS | EEV vs RP | {_fmt(r.vss)} |",
           f"| EVPI | RP vs WS | {_fmt(r.evpi)} |", ""]
+    if r.risk_parts is not None:
+        a = study.risk.alpha
+        L += [f"| Decision | Expected {unit} | CVaR at {a:g} |", "| --- | ---: | ---: |"]
+        for k, label in (("RP", "stochastic (risk-averse)"), ("EEV", "mean-value"), ("WS", "perfect information")):
+            L.append(f"| {label} | {_fmt(r.risk_parts[k]['mean'])} | {_fmt(r.risk_parts[k]['cvar'])} |")
+        L.append("")
+    if study.frontier:
+        a = study.frontier[0]["alpha"]
+        hold = "holdout_mean" in study.frontier[0]
+        L += ["## Mean-risk trade-off", "",
+              f"Each row solves the stochastic program with a different weight on CVaR at {a:g}.", "",
+              f"| CVaR weight | Expected {unit} | CVaR |" + (" Out-of-sample mean | Out-of-sample CVaR |" if hold else ""),
+              "| ---: | ---: | ---: |" + (" ---: | ---: |" if hold else "")]
+        for f in study.frontier:
+            L.append(f"| {f['weight']:g} | {_fmt(f['mean'])} | {_fmt(f['cvar'])} |"
+                     + (f" {_fmt(f['holdout_mean'])} | {_fmt(f['holdout_cvar'])} |" if hold else ""))
+        L.append("")
 
     L += ["## First-stage decision", "", "| Variable | Mean-value model | Stochastic model |",
           "| --- | ---: | ---: |"]
@@ -124,6 +153,10 @@ def summary_markdown(study) -> str:
               f"observations and worse in {100 * o['share_ev_better']:.0f}%.",
               f"- Feasible observations: mean-value {o['n_feasible_ev']}/{o['n']}, "
               f"stochastic {o['n_feasible_rp']}/{o['n']}.", ""]
+        if "risk_gain" in o:
+            L[-1:-1] = [f"- Risk-adjusted objective: mean-value decision {_fmt(o['risk_ev'])}, stochastic "
+                        f"decision {_fmt(o['risk_rp'])}; gain {_fmt(o['risk_gain'])}, 95% bootstrap interval "
+                        f"[{_fmt(o['risk_gain_ci95'][0])}, {_fmt(o['risk_gain_ci95'][1])}]."]
     if study.gap:
         g = study.gap
         L += ["## Solution quality", "",
@@ -148,8 +181,8 @@ def latex_table(study) -> str:
             ("EVPI", "Expected value of perfect information", r.evpi)]
     infty, eol = "$\\infty$", " \\\\"
     body = "\n".join(f"{a} & {b} & {_fmt(v).replace('inf', infty)}{eol}" for a, b, v in rows)
-    return ("\\begin{tabular}{llr}\n\\toprule\n & Quantity & Expected "
-            + ("cost" if r.sense == "min" else "value") + " \\\\\n\\midrule\n" + body
+    head = ("Expected " + ("cost" if r.sense == "min" else "value")) if r.risk_parts is None else "Objective"
+    return ("\\begin{tabular}{llr}\n\\toprule\n & Quantity & " + head + " \\\\\n\\midrule\n" + body
             + "\n\\bottomrule\n\\end{tabular}\n")
 
 
@@ -174,7 +207,8 @@ def write_report(study, outdir, figures: bool = True) -> str:
                "checks": [{"name": c.name, "status": c.status, "detail": c.detail} for c in study.checks],
                "scenarios": {"names": study.scenarios.names, "probabilities": study.scenarios.probs,
                              "values": study.scenarios.values},
-               "out_of_sample": study.oos, "stability": study.stability_table, "saa_gap": study.gap}
+               "out_of_sample": study.oos, "stability": study.stability_table, "saa_gap": study.gap,
+               "risk_frontier": study.frontier}
     with open(os.path.join(outdir, "results.json"), "w", encoding="utf-8") as f:
         json.dump(_jsonable(payload), f, indent=2)
     with open(os.path.join(outdir, "table_values.tex"), "w", encoding="utf-8") as f:

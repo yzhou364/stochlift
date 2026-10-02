@@ -1,0 +1,18 @@
+# Risk-averse farmer: the same yield distributions, objective = 0.5 E[net cost] + 0.5 CVaR_0.9.
+# Weather moves all three crops together, so the yields are strongly correlated.
+first_stage:
+- acres_*          # land is allocated before the growing season
+uncertain:
+- yield
+scenarios:
+  method: distribution
+  n: 100           # scenarios in the stochastic program
+  n_test: 500      # independent samples for the out-of-sample test
+  seed: 0
+  correlation: 0.8
+  distributions:
+    yield: {dist: normal, cv: 0.15, min: 0}
+risk:
+  alpha: 0.9       # the worst 10% of seasons
+  weight: 0.5      # half expected net cost, half CVaR
+notes: Risk-averse version of uncertainty_distribution.yaml.

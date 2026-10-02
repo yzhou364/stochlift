@@ -33,7 +33,10 @@ def first_stage_names(models, is_first) -> list:
     return names
 
 
-def extensive_form(models, probs, is_first) -> ExtensiveForm:
+def extensive_form(models, probs, is_first, risk=None) -> ExtensiveForm:
+    """The deterministic equivalent. With an active ``risk`` (see :mod:`stochlift.risk`) the
+    objective is ``(1 - w) E[f] + w CVaR_alpha(f)``, linearized with one free column ``eta``
+    and one non-negative column per scenario after all model columns."""
     probs = np.asarray(probs, dtype=float)
     if len(models) != len(probs):
         raise ValueError("one probability per scenario model is required")
@@ -60,6 +63,7 @@ def extensive_form(models, probs, is_first) -> ExtensiveForm:
     blocks = []
     offset = 0.0
     ncol, nrow = k, 0
+    scenario_cost = []          # per scenario: (columns, coefficients, constant) of its total cost
 
     for s, (m, p) in enumerate(zip(models, probs)):
         is_f = np.array([nm in fpos for nm in m.names], dtype=bool)
@@ -91,6 +95,8 @@ def extensive_form(models, probs, is_first) -> ExtensiveForm:
         blocks.append((ncol, second))
         ncol += len(second)
         offset += p * m.offset
+        nz = np.flatnonzero(m.c)
+        scenario_cost.append((colmap[nz], m.c[nz], float(m.offset)))
 
         A = m.A.tocsr()
         for i in range(m.m):
@@ -117,6 +123,29 @@ def extensive_form(models, probs, is_first) -> ExtensiveForm:
     if bound_changes:
         notes.append("bounds of first-stage variables differ between scenarios "
                      f"({', '.join(sorted(bound_changes)[:5])}); the intersection is used")
+
+    if risk is not None and risk.active:
+        # (1 - w) E[f] + w (eta + sum_s p_s u_s / (1 - alpha)),  u_s >= f_s - eta,  u_s >= 0
+        w, a = float(risk.weight), float(risk.alpha)
+        c = [(1 - w) * part for part in c]
+        offset *= (1 - w)
+        S = len(models)
+        eta = ncol
+        c.append(np.concatenate([[w], w * probs / (1 - a)]))
+        lb.append(np.concatenate([[-np.inf], np.zeros(S)]))
+        ub.append(np.full(S + 1, np.inf))
+        integer.append(np.zeros(S + 1, dtype=bool))
+        names.extend(["__cvar_eta"] + [f"__cvar_excess@s{s}" for s in range(S)])
+        for s, (cc, cv, const) in enumerate(scenario_cost):
+            # f_s(x) - eta - u_s <= -const
+            rows.extend([nrow] * (len(cc) + 2))
+            cols.extend(cc.tolist() + [eta, eta + 1 + s])
+            vals.extend(cv.tolist() + [-1.0, -1.0])
+            row_lb.append(-np.inf)
+            row_ub.append(-const)
+            row_names.append(f"__cvar_excess@s{s}")
+            nrow += 1
+        ncol += S + 1
 
     A = sp.coo_matrix((vals, (rows, cols)), shape=(nrow, ncol)).tocsr()
     ef = LinearModel(names=names, c=np.concatenate(c), offset=offset, lb=np.concatenate(lb),

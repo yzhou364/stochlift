@@ -116,6 +116,28 @@ out of sample (500 independent samples): mean gain 807, 95% interval [449, 1,175
 In Python, `sl.sample(DATA, {"yield": {"dist": "normal", "cv": 0.15}}, n=100, correlation=0.8)`
 returns a scenario set to pass as `scenarios=`.
 
+## Risk-averse decisions (CVaR)
+
+The expected cost is not always what matters: a decision that is slightly cheaper on average
+can be much worse in a bad season. Add a `risk` block to the spec to optimize
+`(1 - weight) x expected cost + weight x CVaR`, where CVaR at `alpha` is the mean of the worst
+`1 - alpha` share of outcomes (for a maximization model, the lowest values):
+
+```yaml
+risk:
+  alpha: 0.9      # the worst 10% of outcomes
+  weight: 0.5     # half expected cost, half CVaR
+```
+
+The model stays linear (Rockafellar-Uryasev). WS, RP and EEV are all measured with the same
+objective, so the bound ordering and the other checks still apply, and the out-of-sample test
+compares the risk-adjusted objective as well as the mean. `--frontier 0,0.25,0.5,0.75,1` (or
+`study.risk_frontier(...)`) traces the trade-off between expected cost and CVaR.
+
+For the farmer problem (`examples/farmer/uncertainty_cvar.yaml`), the risk-averse decision does
+worse on average out of sample (by 142, interval -208 to -76) and better on the risk-adjusted
+objective (by 245, interval 121 to 346). A test of the mean alone would have rejected it.
+
 ## With a history of observations
 
 `examples/facility_location` is a Pyomo model that chooses which sites to operate for a week
@@ -229,6 +251,8 @@ thin wrappers that have not been run against the live APIs in this repository's 
 - The data must be a dictionary; uncertain entries must be numbers in nested dicts, lists,
   NumPy arrays, or pandas Series and DataFrames.
 - Distribution-based scenarios use one common correlation for all uncertain entries.
+- CVaR is estimated from the scenarios in its tail. With `alpha: 0.9` and 100 scenarios that is
+  10 scenarios, so the in-sample CVaR is optimistic; compare it with the out-of-sample values.
 - `kmeans` scenarios keep the mean but shrink the tails. Compare with the hold-out test.
 - The hold-out split takes the last rows of the history. It assumes rows are in time order.
 - Out-of-sample intervals are bootstrap intervals of the mean paired gain. They treat
@@ -236,7 +260,7 @@ thin wrappers that have not been run against the live APIs in this repository's 
 
 ## Roadmap
 
-Robust and chance-constrained lifts, decomposition through mpi-sppy, multi-stage models, an
+Robust and chance-constrained lifts, a commercial solver backend for the extensive form, decomposition through mpi-sppy, multi-stage models, an
 MCP server, and LiftBench, a benchmark of deterministic models with known stochastic versions.
 
 ## Contributing

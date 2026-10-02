@@ -19,9 +19,9 @@ def first_stage_values(model: LinearModel, x: np.ndarray, is_first) -> dict:
     return out
 
 
-def solve_recourse_problem(models, probs, is_first, **opts):
+def solve_recourse_problem(models, probs, is_first, risk=None, **opts):
     """Solve the extensive form. Returns (objective, first-stage dict, ExtensiveForm)."""
-    ef: ExtensiveForm = extensive_form(models, probs, is_first)
+    ef: ExtensiveForm = extensive_form(models, probs, is_first, risk)
     sol = solve(ef.model, **opts)
     if not sol.ok:
         raise SolveError(f"the stochastic program (extensive form) is {sol.status}"

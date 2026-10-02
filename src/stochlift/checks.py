@@ -13,7 +13,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from .adapters import to_linear_model
-from .evaluate import expected
 from .lift import extensive_form, first_stage_row_report
 from .model import solve
 
@@ -92,7 +91,7 @@ def run_checks(study) -> list:
         out.append(Check("lift_note", "warn", note))
 
     # 5. with a single scenario the lift must reproduce the deterministic model
-    ef1 = extensive_form([mean], [1.0], study.is_first)
+    ef1 = extensive_form([mean], [1.0], study.is_first, study.risk)
     s1 = solve(ef1.model, **study.opts)
     ok = s1.ok and abs(s1.objective - z["z_ev"]) <= tol
     out.append(Check("single_scenario_reduction", "pass" if ok else "fail",
@@ -106,7 +105,7 @@ def run_checks(study) -> list:
                      f"{order}: WS = {r.ws:.6g}, RP = {r.rp:.6g}, EEV = {r.eev:.6g}"))
 
     # 7. the extensive-form optimum equals the scenario-by-scenario cost of its first stage
-    back = expected(z["costs_rp"], S.probs)
+    back = study.risk.value(z["costs_rp"], S.probs)
     ok = np.isfinite(back) and abs(back - z["z_rp"]) <= tol
     out.append(Check("decomposition_consistency", "pass" if ok else "fail",
                      f"extensive form = {r.rp:.6g}; re-solving each scenario with the first stage "
