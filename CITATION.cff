@@ -6,10 +6,19 @@ authors:
   - family-names: Zhou
     given-names: Yuqun
 version: 0.2.0
+doi: "10.5281/zenodo.23101099"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23101099"
+    description: All versions (resolves to the latest)
+  - type: doi
+    value: "10.5281/zenodo.23101100"
+    description: Version 0.2.0
 repository-code: "https://github.com/yzhou364/stochlift"
 date-released: 2026-10-02
 license: MIT
 keywords:
   - stochastic programming
   - operations research
-  - large language models
+  - optimization under uncertainty
+  - value of the stochastic solution

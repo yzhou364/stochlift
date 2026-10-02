@@ -1,6 +1,8 @@
 # StochLift
 
 [![tests](https://github.com/yzhou364/stochlift/actions/workflows/tests.yml/badge.svg)](https://github.com/yzhou364/stochlift/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/stochlift.svg)](https://pypi.org/project/stochlift/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23101099.svg)](https://doi.org/10.5281/zenodo.23101099)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Turn the deterministic optimization model you already have into a two-stage stochastic
@@ -8,7 +10,7 @@ program with one command, check the result with the solver, and find out whether
 the uncertainty is worth it.
 
 Status: v0.2, alpha. Two-stage stochastic programs with linear and mixed-integer linear
-models. Python 3.10+, Windows, macOS and Linux. Not yet on PyPI.
+models. Python 3.10+, Windows, macOS and Linux.
 
 ## Why
 
@@ -45,8 +47,14 @@ enter the model.
 ## Install
 
 ```bash
+pip install "stochlift[pulp]"      # or [pyomo], or [all]; gurobipy, OR-Tools and highspy models also work
+```
+
+For development:
+
+```bash
 git clone https://github.com/yzhou364/stochlift.git && cd stochlift
-pip install -e ".[pulp,pyomo]"
+pip install -e ".[dev]"
 pytest
 ```
 
@@ -291,7 +299,21 @@ See `CONTRIBUTING.md`. If you lifted a model of your own, please tell us about i
 
 ## Citing
 
-See `CITATION.cff`. A paper describing the method is planned.
+If StochLift helps your work, please cite the software (this DOI always resolves to the latest
+version; GitHub's "Cite this repository" button gives the same entry):
+
+```bibtex
+@software{zhou_stochlift,
+  author    = {Zhou, Yuqun},
+  title     = {StochLift: lifting deterministic optimization models to verified two-stage
+               stochastic programs},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23101099},
+  url       = {https://github.com/yzhou364/stochlift}
+}
+```
+
+A paper describing the method is planned.
 
 ## License
 
