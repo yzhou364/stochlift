@@ -1,0 +1,15 @@
+# Farmer problem without a scenario table: yields are uncertain around their average values.
+# Weather moves all three crops together, so the yields are strongly correlated.
+first_stage:
+- acres_*          # land is allocated before the growing season
+uncertain:
+- yield
+scenarios:
+  method: distribution
+  n: 100           # scenarios in the stochastic program
+  n_test: 500      # independent samples for the out-of-sample test
+  seed: 0
+  correlation: 0.8
+  distributions:
+    yield: {dist: normal, cv: 0.15, min: 0}
+notes: Yields are normal with a 15% coefficient of variation around the averages in DATA.

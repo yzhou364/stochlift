@@ -149,7 +149,7 @@ def fig_out_of_sample(study, outdir, title=True) -> str:
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.set_yticklabels(["0%", "25%", "50%", "75%", "100%"])
     ax.set_ylabel("Share of out-of-sample scenarios at or below")
-    ax.set_xlabel(f"Realized {_unit(study)} per observation (marker = mean)")
+    ax.set_xlabel(f"Realized {_unit(study)} per scenario (marker = mean)")
     _thousands(ax)
     ax.legend(loc="lower right")
     if title:
@@ -198,7 +198,7 @@ def fig_gain(study, outdir, title=True) -> str:
     pad = 0.05 * (edges[-1] - edges[0])
     ax.set_xlim(min(edges[0], lo) - pad, max(edges[-1], hi) + pad)
     ax.set_ylabel("Out-of-sample scenarios")
-    ax.set_xlabel("Gain from the stochastic decision, per observation")
+    ax.set_xlabel("Gain from the stochastic decision, per scenario")
     _thousands(ax)
     _legend_below(fig, ax)
     if title:
