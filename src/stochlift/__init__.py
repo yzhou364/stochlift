@@ -7,6 +7,6 @@ from .scenarios import ScenarioSet, explicit, from_history
 from .spec import Spec
 from .study import Results, Study, lift
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["lift", "Study", "Results", "Spec", "ScenarioSet", "explicit", "from_history", "sample",
            "to_linear_model", "LinearModel", "solve", "Check", "all_passed", "UnsupportedModel"]

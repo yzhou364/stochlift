@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-02)
 
 - Parallel scenario solves on a thread pool (`n_jobs`, `--jobs`): 2.4x faster on a 50-scenario
   facility-location model, with identical results.
