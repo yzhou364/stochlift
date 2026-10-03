@@ -12,6 +12,9 @@ identifiers:
     value: "10.5281/zenodo.23101099"
     description: All versions (resolves to the latest)
   - type: doi
+    value: "10.5281/zenodo.23112747"
+    description: Version 0.3.0
+  - type: doi
     value: "10.5281/zenodo.23101100"
     description: Version 0.2.0
 repository-code: "https://github.com/yzhou364/stochlift"
