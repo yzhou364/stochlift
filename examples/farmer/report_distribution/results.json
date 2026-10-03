@@ -11,6 +11,8 @@
     "EVPI_pct_of_RP": 5.826486604849544,
     "n_scenarios": 100,
     "EEV_infeasible_scenarios": 0,
+    "objective": "expected cost",
+    "risk_parts": null,
     "first_stage_mean_value_solution": {
       "acres_wheat": 122.49860509870916,
       "acres_corn": 79.80454046630439,
@@ -1700,7 +1702,7 @@
       "n": 5,
       "rep": 0,
       "in_sample": -114686.63920218496,
-      "holdout": -108948.62345391983,
+      "holdout": -108948.62345391982,
       "holdout_infeasible": 0
     },
     {
@@ -1714,28 +1716,28 @@
       "n": 5,
       "rep": 2,
       "in_sample": -135627.9703876915,
-      "holdout": -105761.71107056708,
+      "holdout": -105761.71107056706,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 3,
       "in_sample": -116671.91986915347,
-      "holdout": -106881.00256978029,
+      "holdout": -106881.00256978032,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 4,
       "in_sample": -87256.46088232129,
-      "holdout": -104631.18273410191,
+      "holdout": -104631.18273410192,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 0,
       "in_sample": -107927.17557661209,
-      "holdout": -108877.12024879092,
+      "holdout": -108877.12024879093,
       "holdout_infeasible": 0
     },
     {
@@ -1756,21 +1758,21 @@
       "n": 10,
       "rep": 3,
       "in_sample": -102691.57791864715,
-      "holdout": -108912.4066837084,
+      "holdout": -108912.40668370838,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 4,
       "in_sample": -88007.42780575166,
-      "holdout": -105320.50386386408,
+      "holdout": -105320.5038638641,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 0,
       "in_sample": -108288.83407348959,
-      "holdout": -108838.28670563645,
+      "holdout": -108838.28670563646,
       "holdout_infeasible": 0
     },
     {
@@ -1784,14 +1786,14 @@
       "n": 20,
       "rep": 2,
       "in_sample": -93488.73913761924,
-      "holdout": -108854.22110025068,
+      "holdout": -108854.2211002507,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 3,
       "in_sample": -112145.26776154009,
-      "holdout": -108908.99580779283,
+      "holdout": -108908.99580779285,
       "holdout_infeasible": 0
     },
     {
@@ -1812,7 +1814,7 @@
       "n": 50,
       "rep": 1,
       "in_sample": -101232.62995965294,
-      "holdout": -108937.90676952997,
+      "holdout": -108937.90676952999,
       "holdout_infeasible": 0
     },
     {
@@ -1833,14 +1835,14 @@
       "n": 50,
       "rep": 4,
       "in_sample": -111032.96959552007,
-      "holdout": -108794.3151231639,
+      "holdout": -108794.31512316389,
       "holdout_infeasible": 0
     },
     {
       "n": 100,
       "rep": 0,
       "in_sample": -104968.4918365956,
-      "holdout": -108941.06119388691,
+      "holdout": -108941.0611938869,
       "holdout_infeasible": 0
     },
     {
@@ -1868,15 +1870,16 @@
       "n": 100,
       "rep": 4,
       "in_sample": -109151.2609789911,
-      "holdout": -108916.16545698678,
+      "holdout": -108916.1654569868,
       "holdout_infeasible": 0
     }
   ],
   "saa_gap": {
     "n": 50,
     "batches": 10,
-    "mean_gap": 75.52908194296324,
-    "upper95": 135.65221231907512,
-    "pct_of_RP": 0.1214861389189068
-  }
+    "mean_gap": 75.52908194296614,
+    "upper95": 135.65221231907464,
+    "pct_of_RP": 0.12148613891890638
+  },
+  "risk_frontier": null
 }

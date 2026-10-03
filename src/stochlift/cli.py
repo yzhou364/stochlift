@@ -183,15 +183,17 @@ def cmd_run(args) -> int:
     if args.frontier:
         study.risk_frontier(weights=[float(w) for w in args.frontier.split(",")], alpha=args.alpha)
     path = study.report(args.out, figures=not args.no_figures)
-    print(f"\nRP {r.rp:,.6g}  EEV {r.eev:,.6g}  WS {r.ws:,.6g}  VSS {r.vss:,.6g} "
-          f"({r.vss_pct:.2f}%)  EVPI {r.evpi:,.6g} ({r.evpi_pct:.2f}%)")
+    from .report import _fmt as f
+
+    print(f"\nRP {f(r.rp)}  EEV {f(r.eev)}  WS {f(r.ws)}  VSS {f(r.vss)} ({r.vss_pct:.2f}%)  "
+          f"EVPI {f(r.evpi)} ({r.evpi_pct:.2f}%)")
     if study.oos:
         o = study.oos
-        print(f"out of sample ({o['n_compared']} {o['source']}): mean gain {o['mean_gain']:,.6g}, "
-              f"95% interval [{o['gain_ci95'][0]:,.6g}, {o['gain_ci95'][1]:,.6g}]")
+        print(f"out of sample ({o['n_compared']} {o['source']}): mean gain {f(o['mean_gain'])}, "
+              f"95% interval [{f(o['gain_ci95'][0])}, {f(o['gain_ci95'][1])}]")
         if "risk_gain" in o:
-            print(f"  risk-adjusted gain {o['risk_gain']:,.6g}, 95% interval "
-                  f"[{o['risk_gain_ci95'][0]:,.6g}, {o['risk_gain_ci95'][1]:,.6g}] ({r.objective})")
+            print(f"  risk-adjusted gain {f(o['risk_gain'])}, 95% interval "
+                  f"[{f(o['risk_gain_ci95'][0])}, {f(o['risk_gain_ci95'][1])}] ({r.objective})")
     print(f"report: {path}")
     if not all_passed(checks):
         print("some checks FAILED; see the report before using these results", file=sys.stderr)

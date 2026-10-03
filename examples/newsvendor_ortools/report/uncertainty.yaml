@@ -1,0 +1,17 @@
+first_stage:
+- order
+uncertain:
+- demand
+columns: {}
+scenarios:
+  method: distribution
+  n: 400
+  n_test: 2000
+  seed: 0
+  distributions:
+    demand:
+      dist: lognormal
+      cv: 0.3
+holdout: 0.0
+notes: The optimal order is the 50% quantile of demand, since (10 - 6) / (10 - 2)
+  = 0.5.

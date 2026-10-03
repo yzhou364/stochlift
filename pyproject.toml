@@ -47,4 +47,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 faulthandler_timeout = 300     # print every thread's stack if a test hangs
-filterwarnings = ["ignore::DeprecationWarning:pulp"]
+filterwarnings = ["ignore::DeprecationWarning:pulp", "ignore:builtin type .* has no __module__:DeprecationWarning"]

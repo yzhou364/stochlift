@@ -1,0 +1,13 @@
+# Demand is lognormal around 100 with a 30% coefficient of variation.
+first_stage:
+- order
+uncertain:
+- demand
+scenarios:
+  method: distribution
+  n: 400
+  n_test: 2000
+  seed: 0
+  distributions:
+    demand: {dist: lognormal, cv: 0.3}
+notes: The optimal order is the 50% quantile of demand, since (10 - 6) / (10 - 2) = 0.5.

@@ -11,6 +11,8 @@
     "EVPI_pct_of_RP": 9.2097981973369,
     "n_scenarios": 30,
     "EEV_infeasible_scenarios": 0,
+    "objective": "expected cost",
+    "risk_parts": null,
     "first_stage_mean_value_solution": {
       "open[S1]": 1.0,
       "open[S2]": 0.0,
@@ -587,63 +589,64 @@
       5953.84,
       6128.64,
       6183.44
-    ]
+    ],
+    "source": "held-out observations"
   },
   "stability": [
     {
       "n": 5,
       "rep": 0,
       "in_sample": 6010.15,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 1,
       "in_sample": 6406.128,
-      "holdout": 6002.041025641026,
+      "holdout": 6002.041025641027,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 2,
       "in_sample": 6672.129999999999,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 3,
       "in_sample": 5641.93,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 4,
       "in_sample": 5918.1320000000005,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 5,
       "in_sample": 6864.919999999998,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 6,
       "in_sample": 6681.184,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 5,
       "rep": 7,
       "in_sample": 5902.302,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
@@ -657,295 +660,296 @@
       "n": 5,
       "rep": 9,
       "in_sample": 6221.896,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 0,
       "in_sample": 5793.486,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 1,
       "in_sample": 6172.17,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 2,
       "in_sample": 6106.228,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 3,
       "in_sample": 6296.334,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 4,
       "in_sample": 6195.068,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 5,
       "in_sample": 5575.789,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 6,
       "in_sample": 6147.997,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 7,
       "in_sample": 6723.661,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 8,
       "in_sample": 6829.928,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 10,
       "rep": 9,
       "in_sample": 6350.835,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 0,
       "in_sample": 6200.2425,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 1,
       "in_sample": 6746.3815,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 2,
       "in_sample": 6268.0689999999995,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 3,
       "in_sample": 6533.085,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 4,
       "in_sample": 5504.1935,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 5,
       "in_sample": 6237.796,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 6,
       "in_sample": 6358.3065,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 7,
       "in_sample": 6432.4125,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 8,
       "in_sample": 6639.024,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 20,
       "rep": 9,
       "in_sample": 6510.212,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 0,
       "in_sample": 6385.16825,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 1,
       "in_sample": 6215.394,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 2,
       "in_sample": 6472.93925,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 3,
       "in_sample": 6277.5985,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 4,
       "in_sample": 6340.81475,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 5,
       "in_sample": 6462.25275,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 6,
       "in_sample": 6332.73575,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 7,
       "in_sample": 5834.8615,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 8,
       "in_sample": 6357.27675,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 40,
       "rep": 9,
       "in_sample": 6445.70375,
-      "holdout": 6139.029358974357,
+      "holdout": 6139.029358974358,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 0,
       "in_sample": 6214.336,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 1,
       "in_sample": 6375.548625,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 2,
       "in_sample": 6366.200625,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 3,
       "in_sample": 6545.187625,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 4,
       "in_sample": 6260.20625,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 5,
       "in_sample": 6146.959125,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 6,
       "in_sample": 6255.44125,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 7,
       "in_sample": 6005.268125,
-      "holdout": 5979.112435897435,
+      "holdout": 5979.112435897437,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 8,
       "in_sample": 6180.1942500000005,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     },
     {
       "n": 80,
       "rep": 9,
       "in_sample": 6244.543125,
-      "holdout": 6057.408076923078,
+      "holdout": 6057.408076923077,
       "holdout_infeasible": 0
     }
   ],
   "saa_gap": {
     "n": 50,
     "batches": 20,
-    "mean_gap": 12.170720000000028,
-    "upper95": 24.88268918581865,
-    "pct_of_RP": 0.40038006177673263
-  }
+    "mean_gap": 12.170720000000392,
+    "upper95": 24.882689185819054,
+    "pct_of_RP": 0.4003800617767392
+  },
+  "risk_frontier": null
 }

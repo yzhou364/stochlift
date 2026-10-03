@@ -192,6 +192,44 @@ The in-sample VSS looks large in the first column, but on unseen weeks the inter
 touches zero, so the report does not claim a gain. That is the point of the hold-out test:
 VSS computed on the scenarios that produced the decision is optimistic.
 
+## Examples
+
+| Folder | Library | Shows |
+| --- | --- | --- |
+| `examples/farmer` | PuLP | textbook values (Birge and Louveaux), distributions, CVaR |
+| `examples/facility_location` | Pyomo | binary first stage, a demand history with a hold-out test |
+| `examples/newsvendor_ortools` | OR-Tools | the order equals the critical-ratio quantile (`check_closed_form.py`) |
+| `examples/capacity_expansion_gurobi` | gurobipy | generation capacity under correlated load, mean-CVaR frontier |
+
+Each folder has a generated `report/`. Run any of them with `stochlift run model.py` from the folder.
+
+## Larger models
+
+- Scenario-by-scenario solves (perfect information, evaluating a fixed first stage, the
+  out-of-sample test) run in parallel threads: `n_jobs=...` or `--jobs N` (default: the number
+  of CPUs, at most 8). Results do not depend on the number of threads.
+- `solver="gurobi"` (or `--solver gurobi`) solves every model with Gurobi instead of HiGHS.
+- When the extensive form is too large, hand the same scenarios to
+  [mpi-sppy](https://github.com/Pyomo/mpi-sppy) for decomposition. `study.to_mpisppy()` gives
+  its scenario creator, and `stochlift export model.py` writes a module for
+  `mpisppy.generic_cylinders`. This works for models from any supported library. The test suite
+  checks that mpi-sppy's own extensive form reproduces StochLift's RP and first-stage decision.
+
+## When there is no solution
+
+If the stochastic program is infeasible, the error says why in terms of your data:
+
+```text
+1 of 4 scenarios have no optimal solution even when solved on their own (infeasible), so no
+stochastic program over them can be solved.
+  scenario 2: demand = 130 (mean 77.5)
+The deterministic model itself has no solution for these data. Typical fixes: allow shortfalls
+with slack variables at a penalty cost ...
+```
+
+When every scenario is feasible on its own but no first-stage decision suits them all, it names
+a pair of scenarios that conflict.
+
 ## What is checked
 
 `study.check()` needs no reference answer. Each item is computed by the solver:
@@ -274,8 +312,7 @@ statistical tools (Mak-Morton-Wood gap, CVaR) are standard, and are also in mpi-
 
 - Two stages only. No multi-stage models, chance constraints or robust counterparts yet.
 - Linear and mixed-integer linear models only.
-- The extensive form is solved directly. There is no decomposition, so very large scenario
-  counts or very large models will be slow.
+- The extensive form is solved directly; for decomposition, export to mpi-sppy (see above).
 - The builder is called once per distinct scenario. A slow builder makes everything slow.
 - The data must be a dictionary; uncertain entries must be numbers in nested dicts, lists,
   NumPy arrays, or pandas Series and DataFrames.
@@ -289,7 +326,7 @@ statistical tools (Mak-Morton-Wood gap, CVaR) are standard, and are also in mpi-
 
 ## Roadmap
 
-Robust and chance-constrained lifts, a commercial solver backend for the extensive form, decomposition through mpi-sppy, multi-stage models, an
+Robust and chance-constrained lifts, decomposition through mpi-sppy, multi-stage models, an
 MCP server, and LiftBench, a benchmark of deterministic models with known stochastic versions.
 
 ## Contributing

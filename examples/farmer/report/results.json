@@ -11,6 +11,8 @@
     "EVPI_pct_of_RP": 6.472511814333009,
     "n_scenarios": 3,
     "EEV_infeasible_scenarios": 0,
+    "objective": "expected cost",
+    "risk_parts": null,
     "first_stage_mean_value_solution": {
       "acres_wheat": 120.0,
       "acres_corn": 80.0,
@@ -95,5 +97,6 @@
   },
   "out_of_sample": null,
   "stability": null,
-  "saa_gap": null
+  "saa_gap": null,
+  "risk_frontier": null
 }

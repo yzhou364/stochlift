@@ -55,11 +55,21 @@ def _legend_below(fig, ax, ncol=2, gap_in=0.55):
               columnspacing=1.5, borderaxespad=0)
 
 
+def _tick(v: float) -> str:
+    """Compact tick label: 950, 12,500, 3.4M, 1.25B."""
+    a = abs(v)
+    for scale, suffix in ((1e9, "B"), (1e6, "M")):
+        if a >= scale:
+            return f"{v / scale:,.3g}{suffix}"
+    if a >= 1000 or float(v).is_integer():
+        return f"{v:,.0f}"
+    return f"{v:,.2g}"
+
+
 def _thousands(ax, axis="x"):
     from matplotlib.ticker import FuncFormatter
 
-    fmt = FuncFormatter(lambda v, _: f"{v:,.0f}" if abs(v) >= 1000 or float(v).is_integer() else f"{v:,.2g}")
-    (ax.xaxis if axis == "x" else ax.yaxis).set_major_formatter(fmt)
+    (ax.xaxis if axis == "x" else ax.yaxis).set_major_formatter(FuncFormatter(lambda v, _: _tick(v)))
 
 
 def _save(fig, outdir, name) -> str:
@@ -344,8 +354,19 @@ def fig_risk_frontier(study, outdir, title=True) -> str:
     if c_ev is not None and np.isfinite(c_ev).all():
         sign = -1.0 if res.sense == "max" else 1.0
         internal = sign * c_ev
-        ax.plot([sign * cvar(internal, study.scenarios.probs, a)], [sign * float(study.scenarios.probs @ internal)],
-                ls="none", marker=M_EV, ms=8, color=C_EV, mec="white", mew=1.5, label=L_EV)
+        ev_x = sign * cvar(internal, study.scenarios.probs, a)
+        ev_y = sign * float(study.scenarios.probs @ internal)
+        xs = x + ([r["holdout_cvar"] for r in rows] if "holdout_mean" in rows[0] else [])
+        ys = y + ([r["holdout_mean"] for r in rows] if "holdout_mean" in rows[0] else [])
+        span_x = max(np.ptp(xs), 1e-9 * max(1.0, abs(np.mean(xs))))
+        span_y = max(np.ptp(ys), 1e-9 * max(1.0, abs(np.mean(ys))))
+        far = (min(abs(ev_x - min(xs)), abs(ev_x - max(xs))) > 2 * span_x and not min(xs) <= ev_x <= max(xs)) or               (min(abs(ev_y - min(ys)), abs(ev_y - max(ys))) > 2 * span_y and not min(ys) <= ev_y <= max(ys))
+        if far:
+            # drawing it would squash the frontier into a corner: state its values instead
+            ax.text(0.98, 0.97, f"{L_EV} (off the chart):\nexpected {_tick(ev_y)}, CVaR {_tick(ev_x)}",
+                    transform=ax.transAxes, ha="right", va="top", fontsize=8, color=C_EV)
+        else:
+            ax.plot([ev_x], [ev_y], ls="none", marker=M_EV, ms=8, color=C_EV, mec="white", mew=1.5, label=L_EV)
     ax.yaxis.grid(True)
     ax.set_axisbelow(True)
     worst = "highest costs" if res.sense == "min" else "lowest values"

@@ -22,7 +22,7 @@ jobs:
             extra: pulp3          # the PuLP 2/3 API that most existing models use
           - os: ubuntu-latest
             python: "3.12"
-            extra: gurobi-ortools # size-limited gurobipy license, OR-Tools in a subprocess
+            extra: gurobi-ortools # size-limited gurobipy license, OR-Tools, mpi-sppy export
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,7 +38,7 @@ jobs:
         run: python -m pip install "pulp>=3,<4"
       - name: Gurobi and OR-Tools
         if: matrix.extra == 'gurobi-ortools'
-        run: python -m pip install gurobipy ortools
+        run: python -m pip install gurobipy ortools mpi-sppy
       - name: Test
         run: python -m pytest -q -rs
       - name: Command line smoke test

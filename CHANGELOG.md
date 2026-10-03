@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+- Parallel scenario solves on a thread pool (`n_jobs`, `--jobs`): 2.4x faster on a 50-scenario
+  facility-location model, with identical results.
+- Gurobi backend (`solver="gurobi"`, `--solver gurobi`), checked against HiGHS on random LPs and
+  MIPs and on the farmer problem.
+- Export to mpi-sppy for decomposition: `study.to_mpisppy()` and `stochlift export`. mpi-sppy's
+  extensive form reproduces RP and the first-stage decision on the farmer and facility examples.
+- Infeasible stochastic programs are explained: scenarios that are infeasible or unbounded on
+  their own are named with their unusual data, and when no common first stage exists a
+  conflicting pair of scenarios is reported.
+- New examples: newsvendor in OR-Tools (checked against the critical-ratio quantile) and
+  generation capacity expansion in gurobipy (mean-CVaR frontier).
+- Compact axis labels for large numbers; the mean-risk figure states the mean-value decision in
+  text when plotting it would squash the frontier.
+- The command line prints numbers with thousands separators.
+
 ## 0.2.0 (2026-10-02)
 
 - Scenarios from distributions when there is no history (`scenarios.method: distribution`):

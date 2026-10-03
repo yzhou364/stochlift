@@ -1,0 +1,22 @@
+first_stage:
+- cap[*]
+uncertain:
+- load
+columns: {}
+scenarios:
+  method: distribution
+  n: 200
+  n_test: 1000
+  seed: 0
+  correlation: 0.8
+  distributions:
+    load:
+      dist: normal
+      cv: 0.15
+      min: 0
+holdout: 0.0
+risk:
+  alpha: 0.9
+  weight: 0.5
+notes: Capacity is built years ahead (first stage); dispatch and unserved load follow
+  the actual load.
