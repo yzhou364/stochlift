@@ -695,6 +695,7 @@
     "n_feasible_ev": 500,
     "n_feasible_rp": 500,
     "n_compared": 500,
+    "n_boot": 10000,
     "mean_ev": -108130.25449089523,
     "mean_rp": -107988.51740136438,
     "mean_gain": -141.7370895308338,

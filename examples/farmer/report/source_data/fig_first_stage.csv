@@ -1,0 +1,4 @@
+variable,mean_value_model,stochastic_model
+acres_wheat,120.0,170.0
+acres_corn,80.0,80.0
+acres_beets,300.0,250.0

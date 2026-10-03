@@ -73,9 +73,6 @@ The checks verify that the lift is mathematically consistent with the determinis
 
 ## Figures
 
-- `fig_value.pdf`
-- `fig_first_stage.pdf`
-- `fig_scenarios.pdf`
-- `fig_out_of_sample.pdf`
-- `fig_gain.pdf`
-- `fig_risk_frontier.pdf`
+![Overview](fig_overview.png)
+
+Legends for every figure are in `captions.md`, and the numbers behind each figure in `source_data/`. Files: `fig_overview`, `fig_value`, `fig_first_stage`, `fig_scenarios`, `fig_out_of_sample`, `fig_gain`, `fig_risk_frontier` (PDF, SVG and PNG).

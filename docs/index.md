@@ -25,7 +25,10 @@ there, without annotations or changes to the model, and answers three questions.
    information (EVPI), and an out-of-sample test on data that was not used to make the decision.
    If the gain cannot be told apart from noise, the report says so.
 
-![Farmer problem: expected profit of the three decisions](img/farmer_value.png)
+![Overview figure from a report: generation capacity expansion](img/capacity_overview.png)
+
+Every report includes [journal-ready figures](figures.md): final print size, editable text,
+a draft legend for each figure, and its source data.
 
 ## The only requirement
 

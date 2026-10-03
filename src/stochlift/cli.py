@@ -182,7 +182,7 @@ def cmd_run(args) -> int:
         study.saa_gap(n=args.gap, batches=args.batches)
     if args.frontier:
         study.risk_frontier(weights=[float(w) for w in args.frontier.split(",")], alpha=args.alpha)
-    path = study.report(args.out, figures=not args.no_figures)
+    path = study.report(args.out, figures=not args.no_figures, style=args.style)
     from .report import _fmt as f
 
     print(f"\nRP {f(r.rp)}  EEV {f(r.eev)}  WS {f(r.ws)}  VSS {f(r.vss)} ({r.vss_pct:.2f}%)  "
@@ -253,6 +253,8 @@ def main(argv=None) -> int:
     q.add_argument("--jobs", type=int, help="parallel scenario solves (default: CPU count, at most 8)")
     q.add_argument("--mip-gap", type=float, default=1e-6)
     q.add_argument("--time-limit", type=float, help="seconds per solve")
+    q.add_argument("--style", choices=["nature", "presentation"], default="nature",
+                   help="figures at journal print size (default) or slide size")
     q.add_argument("--no-figures", action="store_true")
     q.add_argument("--no-out-of-sample", action="store_true")
     q.add_argument("-q", "--quiet", action="store_true", help="do not print the review")

@@ -32,6 +32,7 @@ nav:
       - Risk-averse decisions: risk.md
       - Checks and diagnostics: checks.md
       - Larger models: larger-models.md
+      - Figures: figures.md
       - Command line: cli.md
   - Related tools: related.md
   - API reference: api.md

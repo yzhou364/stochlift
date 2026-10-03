@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Journal-ready figures. The default `nature` style draws every figure at its final print size
+  (89 mm, 183 mm for the overview), in Arial at 5-7 pt, without titles, with TrueType fonts in PDF
+  and text elements in SVG. Large numbers are scaled (×10³) with the factor in the axis label.
+- A multi-panel overview figure (`fig_overview`, panels a-f), a draft legend for every figure in
+  `captions.md`, and the plotted numbers in `source_data/`.
+- Redesigned panels: scenario densities with quartiles (and the history, when there is one),
+  out-of-sample box plots, stability bands, overlapping first-stage markers kept visible.
+- `study.figures(outdir, style=...)`, `report(..., style=...)` and `--style presentation`; each
+  panel is a drawing function that can be combined into custom figures.
+- Every figure is PDF, SVG and 600-dpi PNG. Tests check sizes, font sizes, line widths, titles,
+  fonts and source data.
+
 ## 0.3.0 (2026-10-02)
 
 - Parallel scenario solves on a thread pool (`n_jobs`, `--jobs`): 2.4x faster on a 50-scenario

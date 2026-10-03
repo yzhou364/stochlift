@@ -194,6 +194,18 @@ The in-sample VSS looks large in the first column, but on unseen weeks the inter
 touches zero, so the report does not claim a gain. That is the point of the hold-out test:
 VSS computed on the scenarios that produced the decision is optimistic.
 
+## Figures
+
+Every report includes figures at their final print size for journals (89 and 183 mm wide,
+Arial 5-7 pt, no titles, editable text in PDF and SVG), a draft legend for each figure in
+`captions.md`, and the numbers behind each figure in `source_data/`. The overview combines all
+panels, lettered a-f:
+
+![Overview figure: generation capacity expansion](examples/capacity_expansion_gurobi/report/fig_overview.png)
+
+`--style presentation` gives slide-size figures with titles. See the
+[figures guide](https://yzhou364.github.io/stochlift/figures/).
+
 ## Examples
 
 | Folder | Library | Shows |

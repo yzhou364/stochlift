@@ -200,7 +200,7 @@ def _jsonable(o):
     return o
 
 
-def write_report(study, outdir, figures: bool = True) -> str:
+def write_report(study, outdir, figures: bool = True, style: str = "nature") -> str:
     os.makedirs(outdir, exist_ok=True)
     study.spec.save(os.path.join(outdir, "uncertainty.yaml"))
     payload = {"results": study.results.to_dict(),
@@ -217,10 +217,13 @@ def write_report(study, outdir, figures: bool = True) -> str:
     if figures:
         from .plots import make_figures
 
-        made = make_figures(study, outdir)
+        made = make_figures(study, outdir, style=style)
     md = summary_markdown(study)
     if made:
-        md += "\n## Figures\n\n" + "\n".join(f"- `{os.path.basename(p)}`" for p in made) + "\n"
+        md += ("\n## Figures\n\n![Overview](fig_overview.png)\n\nLegends for every figure are in "
+               "`captions.md`, and the numbers behind each figure in `source_data/`. Files: "
+               + ", ".join(f"`{os.path.splitext(os.path.basename(p))[0]}`" for p in made)
+               + " (PDF, SVG and PNG).\n")
     with open(os.path.join(outdir, "summary.md"), "w", encoding="utf-8") as f:
         f.write(md)
     return os.path.join(outdir, "summary.md")

@@ -324,7 +324,7 @@ class Study:
                     "risk_gain": gain, "risk_gain_ci95": rci}
         self.oos = {
             "n": int(len(X)), "n_feasible_ev": int((~np.isnan(c_ev)).sum()),
-            "n_feasible_rp": int((~np.isnan(c_rp)).sum()), "n_compared": int(both.sum()),
+            "n_feasible_rp": int((~np.isnan(c_rp)).sum()), "n_compared": int(both.sum()), "n_boot": int(n_boot),
             "mean_ev": float(sign * c_ev[both].mean()) if both.any() else float("nan"),
             "mean_rp": float(sign * c_rp[both].mean()) if both.any() else float("nan"),
             "mean_gain": float(d.mean()) if len(d) else float("nan"), "gain_ci95": ci,
@@ -434,6 +434,16 @@ class Study:
         return to_mpisppy(self)
 
     # -------------------------------------------------------------------- output
+    def figures(self, outdir, style: str = "nature") -> list:
+        """Write every available figure, a multi-panel overview, ``captions.md`` and
+        ``source_data/`` to ``outdir``; returns the PDF paths. See :mod:`stochlift.plots`."""
+        from .plots import make_figures
+
+        if self.results is None:
+            self.solve()
+        os.makedirs(outdir, exist_ok=True)
+        return make_figures(self, outdir, style=style)
+
     def review(self, show: bool = True) -> str:
         from .report import review_text
 
@@ -442,14 +452,16 @@ class Study:
             print(text)
         return text
 
-    def report(self, outdir, figures: bool = True) -> str:
+    def report(self, outdir, figures: bool = True, style: str = "nature") -> str:
+        """Write summary.md, results.json, a LaTeX table and, with ``figures``, every figure in
+        ``style`` ("nature": final print size for journals; "presentation": slide size)."""
         from .report import write_report
 
         if self.results is None:
             self.solve()
         if not self.checks:
             self.check()
-        return write_report(self, outdir, figures=figures)
+        return write_report(self, outdir, figures=figures, style=style)
 
 
 _CACHE_SIZE = 4096

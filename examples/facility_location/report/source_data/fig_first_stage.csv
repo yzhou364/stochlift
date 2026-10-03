@@ -1,0 +1,6 @@
+variable,mean_value_model,stochastic_model
+open[S1],1.0,1.0
+open[S2],0.0,0.0
+open[S3],0.0,1.0
+open[S4],1.0,0.0
+open[S5],1.0,1.0
