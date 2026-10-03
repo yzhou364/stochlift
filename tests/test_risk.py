@@ -30,7 +30,7 @@ def test_equal_weight_rows_match_the_scalar_version():
 
 def test_risk_validation():
     with pytest.raises(ValueError, match="alpha"):
-        Risk(alpha=1.0)
+        Risk(alpha=1.5)
     with pytest.raises(ValueError, match="weight"):
         Risk(weight=1.5)
     with pytest.raises(ValueError, match="measure"):
@@ -109,3 +109,46 @@ def test_risk_averse_farmer(farmer, tmp_path):
     assert "Risk-averse objective" in text and "Mean-risk trade-off" in text
     assert (tmp_path / "fig_risk_frontier.pdf").exists()
     assert "risk:" in (tmp_path / "uncertainty.yaml").read_text()
+
+
+def test_worst_case_matches_brute_force():
+    pytest.importorskip("pulp")
+    demand = [20.0, 35.0, 50.0, 80.0, 120.0]
+    probs = [0.1, 0.3, 0.3, 0.2, 0.1]
+    scen = [(p, {"demand": d}) for p, d in zip(probs, demand)]
+
+    def cost(q, d):
+        s = min(q, d)
+        return q - 3 * s - 0.2 * (q - s) + 5
+
+    for weight in (1.0, 0.4):
+        study = sl.lift(newsvendor, {"demand": 50.0}, scenarios=scen,
+                        spec={"first_stage": ["order"], "risk": {"measure": "worst_case", "weight": weight}})
+        r = study.solve()
+        risk = Risk(1.0, weight)
+        best = min(risk.value([cost(q, d) for d in demand], probs) for q in [0.0] + demand)
+        assert r.rp == pytest.approx(best, abs=1e-6)
+        assert all(c.status != "fail" for c in study.check())
+        assert "worst case" in r.objective
+    # worst case = the limit of CVaR, and it is the max over scenarios
+    c, p = np.array([3.0, 1.0, 7.0]), np.array([0.2, 0.5, 0.3])
+    assert cvar(c, p, 1.0) == 7.0 and cvar(c, p, 0.9999) == pytest.approx(7.0)
+    assert Risk(1.0, 1.0).values_equal_weights(np.array([[1.0, 5.0, 2.0]]))[0] == 5.0
+    with pytest.raises(ValueError, match="unknown risk fields"):
+        Risk.from_spec({"measure": "worst_case", "alpha": 0.9})
+
+
+def test_worst_case_report_and_frontier(farmer, tmp_path):
+    spec = {"first_stage": ["acres_*"], "risk": {"measure": "worst_case", "weight": 0.5},
+            "scenarios": {"method": "distribution", "n": 20, "n_test": 30, "seed": 3,
+                          "distributions": {"yield": {"dist": "normal", "cv": 0.2, "min": 0}}}}
+    study = sl.lift(farmer.build_model, farmer.DATA, spec=spec)
+    r = study.solve()
+    assert r.ws <= r.rp + 1e-6 <= r.eev + 2e-6
+    assert r.risk_parts["RP"]["cvar"] == pytest.approx(max(r.scenario_costs_rp))
+    study.out_of_sample()
+    rows = study.risk_frontier(weights=(0.0, 0.5, 1.0))
+    assert rows[0]["alpha"] == 1.0
+    study.report(tmp_path)
+    text = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "Worst case" in text and "worst case" in (tmp_path / "captions.md").read_text(encoding="utf-8")

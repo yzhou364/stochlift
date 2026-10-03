@@ -7,6 +7,7 @@ import os
 import numpy as np
 
 from . import datautil as du
+from .risk import tail_label
 
 
 def _fmt(v: float) -> str:
@@ -114,7 +115,7 @@ def summary_markdown(study) -> str:
           f"| EVPI | RP vs WS | {_fmt(r.evpi)} |", ""]
     if r.risk_parts is not None:
         a = study.risk.alpha
-        L += [f"| Decision | Expected {unit} | CVaR at {a:g} |", "| --- | ---: | ---: |"]
+        L += [f"| Decision | Expected {unit} | {tail_label(a)[0].upper()}{tail_label(a)[1:]} |", "| --- | ---: | ---: |"]
         for k, label in (("RP", "stochastic (risk-averse)"), ("EEV", "mean-value"), ("WS", "perfect information")):
             L.append(f"| {label} | {_fmt(r.risk_parts[k]['mean'])} | {_fmt(r.risk_parts[k]['cvar'])} |")
         L.append("")
@@ -122,8 +123,9 @@ def summary_markdown(study) -> str:
         a = study.frontier[0]["alpha"]
         hold = "holdout_mean" in study.frontier[0]
         L += ["## Mean-risk trade-off", "",
-              f"Each row solves the stochastic program with a different weight on CVaR at {a:g}.", "",
-              f"| CVaR weight | Expected {unit} | CVaR |" + (" Out-of-sample mean | Out-of-sample CVaR |" if hold else ""),
+              f"Each row solves the stochastic program with a different weight on the {tail_label(a)}.", "",
+              f"| Weight | Expected {unit} | {tail_label(a)} |"
+              + (f" Out-of-sample mean | Out-of-sample {tail_label(a)} |" if hold else ""),
               "| ---: | ---: | ---: |" + (" ---: | ---: |" if hold else "")]
         for f in study.frontier:
             L.append(f"| {f['weight']:g} | {_fmt(f['mean'])} | {_fmt(f['cvar'])} |"

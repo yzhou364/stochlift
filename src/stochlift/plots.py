@@ -613,7 +613,9 @@ def draw_frontier(study, fig, st):
         ax.text(0.99, 0.99, note, transform=ax.transAxes, ha="right", va="top", fontsize=st.small - 0.5,
                 color=INK2)
     worst = "highest costs" if res.sense == "min" else "lowest values"
-    _scaled(ax, "x", f"CVaR at {a:g}, mean of the worst {100 * (1 - a):g}%", 5)
+    from .risk import tail_label, tail_meaning
+
+    _scaled(ax, "x", f"{tail_label(a)[0].upper()}{tail_label(a)[1:]}, {tail_meaning(a, worst)}", 5)
     _scaled(ax, "y", f"Expected {_unit(study)}", 5)
     _legend(fig, st, ncol=2)
     if st.titles:
@@ -624,8 +626,11 @@ def caption_frontier(study) -> str:
     rows = study.frontier
     a = rows[0]["alpha"]
     hold = " Open squares: the same decisions out of sample." if "holdout_mean" in rows[0] else ""
-    return (f"Mean–risk trade-off. Expected {_unit(study)} against CVaR at {a:g} of the decisions that "
-            f"minimize (1 − w) × expectation + w × CVaR for the weights w shown, evaluated on the "
+    from .risk import tail_label
+
+    tl = tail_label(a)
+    return (f"Mean–risk trade-off. Expected {_unit(study)} against the {tl} of the decisions that "
+            f"minimize (1 − w) × expectation + w × {tl} for the weights w shown, evaluated on the "
             f"scenario set (filled squares).{hold} The blue circle is the mean-value decision.")
 
 

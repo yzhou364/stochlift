@@ -124,7 +124,29 @@ def extensive_form(models, probs, is_first, risk=None) -> ExtensiveForm:
         notes.append("bounds of first-stage variables differ between scenarios "
                      f"({', '.join(sorted(bound_changes)[:5])}); the intersection is used")
 
-    if risk is not None and risk.active:
+    if risk is not None and risk.active and risk.alpha >= 1.0:
+        # worst case: (1 - w) E[f] + w t,  t >= f_s for every scenario with positive probability
+        w = float(risk.weight)
+        c = [(1 - w) * part for part in c]
+        offset *= (1 - w)
+        t = ncol
+        c.append(np.array([w]))
+        lb.append(np.array([-np.inf]))
+        ub.append(np.array([np.inf]))
+        integer.append(np.zeros(1, dtype=bool))
+        names.append("__worst_case")
+        for s, (cc, cv, const) in enumerate(scenario_cost):
+            if probs[s] <= 0:
+                continue
+            rows.extend([nrow] * (len(cc) + 1))         # f_s(x) - t <= -const
+            cols.extend(cc.tolist() + [t])
+            vals.extend(cv.tolist() + [-1.0])
+            row_lb.append(-np.inf)
+            row_ub.append(-const)
+            row_names.append(f"__worst_case@s{s}")
+            nrow += 1
+        ncol += 1
+    elif risk is not None and risk.active:
         # (1 - w) E[f] + w (eta + sum_s p_s u_s / (1 - alpha)),  u_s >= f_s - eta,  u_s >= 0
         w, a = float(risk.weight), float(risk.alpha)
         c = [(1 - w) * part for part in c]
