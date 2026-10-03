@@ -1,0 +1,62 @@
+site_name: StochLift
+site_description: Turn a deterministic optimization model into a verified two-stage stochastic program, and find out whether it is worth it.
+site_url: https://yzhou364.github.io/stochlift/
+repo_url: https://github.com/yzhou364/stochlift
+repo_name: yzhou364/stochlift
+edit_uri: edit/main/docs/
+copyright: MIT License · Yuqun Zhou
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Guide:
+      - The spec file: spec.md
+      - Scenarios: scenarios.md
+      - Risk-averse decisions: risk.md
+      - Checks and diagnostics: checks.md
+      - Larger models: larger-models.md
+      - Command line: cli.md
+  - Related tools: related.md
+  - API reference: api.md
+  - Citing: citing.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc: {permalink: true}
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.arithmatex: {generic: true}
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            show_root_heading: true
+            heading_level: 3
+            docstring_style: sphinx
+            members_order: source

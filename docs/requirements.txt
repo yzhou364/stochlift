@@ -1,0 +1,4 @@
+# MkDocs 2.0 drops the plugin system this site uses: stay on 1.x
+mkdocs>=1.6,<2
+mkdocs-material>=9.5,<10
+mkdocstrings[python]>=0.26

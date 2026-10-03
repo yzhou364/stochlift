@@ -5,6 +5,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23101099.svg)](https://doi.org/10.5281/zenodo.23101099)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+**Documentation: https://yzhou364.github.io/stochlift/**
+
 Turn the deterministic optimization model you already have into a two-stage stochastic
 program with one command, check the result with the solver, and find out whether modeling
 the uncertainty is worth it.
@@ -261,8 +263,10 @@ must review `uncertainty.yaml`.
 | highspy | the `Highs` object | yes |
 | `.lp` / `.mps` file | HiGHS reader | yes |
 
-Some OR-Tools builds bundle their own HiGHS and cannot be imported in the same process as
-`highspy`. StochLift then solves with SciPy's bundled HiGHS instead. Models are read from the
+Some OR-Tools builds on Linux bundle their own HiGHS and cannot be loaded in the same process as
+`highspy`. Import your OR-Tools model before StochLift solves anything (as a script normally
+does); StochLift then solves with SciPy's bundled HiGHS. In a notebook, restart the kernel if
+OR-Tools fails to load after a solve. Models are read from the
 library objects, not through MPS files, because MPS writers drop the objective sense and
 constant.
 
