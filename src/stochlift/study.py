@@ -234,14 +234,23 @@ class Study:
         # its coefficient is zero there); it then has no mean-value decision and is set to a default
         x_ev, missing = complete_first_stage(x_ev, models, self.is_first)
 
-        z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, risk=self.risk,
-                                                n_jobs=self.n_jobs, **self.opts)
+        from . import diagnose
+
+        ws, statuses = wait_and_see(models, n_jobs=self.n_jobs, **self.opts)
+        if any(st != "optimal" for st in statuses):
+            raise diagnose.scenarios_alone(self, statuses)
+        try:
+            z_rp, x_rp, ef = solve_recourse_problem(models, S.probs, self.is_first, risk=self.risk,
+                                                    n_jobs=self.n_jobs, **self.opts)
+        except SolveError as e:
+            if e.status == "infeasible":
+                raise diagnose.common_first_stage(self, models) from e
+            raise
         self.lift_notes = list(ef.notes)
         if missing:
             self.lift_notes.append(
                 f"first-stage variables {missing[:5]} do not appear in the mean-value model; the "
                 "mean-value decision sets them to 0 (or the nearest bound)")
-        ws = wait_and_see(models, n_jobs=self.n_jobs, **self.opts)
         costs_ev = evaluate_first_stage(models, x_ev, self.is_first, n_jobs=self.n_jobs, **self.opts)
         costs_rp = evaluate_first_stage(models, x_rp, self.is_first, n_jobs=self.n_jobs, **self.opts)
         z_ws = self.risk.value(ws, S.probs)

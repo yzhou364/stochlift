@@ -11,7 +11,9 @@ from .model import LinearModel, solve
 
 
 class SolveError(RuntimeError):
-    pass
+    def __init__(self, message, status: str = ""):
+        super().__init__(message)
+        self.status = status
 
 
 def default_jobs() -> int:
@@ -48,7 +50,7 @@ def solve_recourse_problem(models, probs, is_first, risk=None, n_jobs=None, **op
         raise SolveError(f"the stochastic program (extensive form) is {sol.status}"
                          f" [{sol.raw_status}]. If it is infeasible, some scenario has no "
                          "feasible recourse for any first-stage decision: add slack/penalty "
-                         "variables to the deterministic model.")
+                         "variables to the deterministic model.", status=sol.status)
     k = len(ef.first_names)
     x = {}
     for j, nm in enumerate(ef.first_names):
@@ -105,14 +107,12 @@ def evaluate_first_stage(models, x_first: dict, is_first=None, n_jobs=None, **op
     return costs
 
 
-def wait_and_see(models, n_jobs=None, **opts) -> np.ndarray:
-    """Optimal objective of each scenario solved on its own (perfect information)."""
-    out = np.empty(len(models))
-    for s, sol in enumerate(_map(lambda m: solve(m, **opts), models, n_jobs)):
-        if not sol.ok:
-            raise SolveError(f"scenario {s} solved on its own is {sol.status} [{sol.raw_status}]")
-        out[s] = sol.objective
-    return out
+def wait_and_see(models, n_jobs=None, **opts):
+    """Optimal objective of each scenario solved on its own (perfect information), and the
+    status of each solve (the objective is ``nan`` where the status is not optimal)."""
+    sols = _map(lambda m: solve(m, **opts), models, n_jobs)
+    out = np.array([sol.objective if sol.ok else np.nan for sol in sols])
+    return out, [sol.status for sol in sols]
 
 
 def expected(costs: np.ndarray, probs: np.ndarray) -> float:

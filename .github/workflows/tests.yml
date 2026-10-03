@@ -10,6 +10,7 @@ jobs:
   test:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}${{ matrix.extra && format(' / {0}', matrix.extra) || '' }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
