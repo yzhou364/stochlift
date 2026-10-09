@@ -180,6 +180,10 @@ def cmd_run(args) -> int:
         study.stability(sizes=[int(s) for s in args.stability.split(",")], reps=args.reps)
     if args.gap:
         study.saa_gap(n=args.gap, batches=args.batches)
+    if args.sweep:
+        study.uncertainty_sweep(scales=[float(k) for k in args.sweep.split(",")])
+    if args.drivers:
+        study.value_by_parameter()
     if args.frontier:
         study.risk_frontier(weights=[float(w) for w in args.frontier.split(",")], alpha=args.alpha)
     path = study.report(args.out, figures=not args.no_figures, style=args.style)
@@ -247,6 +251,10 @@ def main(argv=None) -> int:
     q.add_argument("--batches", type=int, default=20)
     q.add_argument("--frontier", metavar="WEIGHTS", help="mean-CVaR trade-off for these CVaR weights, "
                                                        "e.g. 0,0.25,0.5,0.75,1")
+    q.add_argument("--sweep", metavar="SCALES", help="VSS and EVPI as the spread of the scenarios is "
+                                                     "scaled, e.g. 0,0.5,1,1.5,2")
+    q.add_argument("--drivers", action="store_true",
+                   help="VSS and EVPI with one group of uncertain data uncertain at a time")
     q.add_argument("--alpha", type=float, help="CVaR level for --frontier (default: the spec's, or 0.9)")
     q.add_argument("--solver", choices=["highs", "gurobi"], default="highs",
                    help="solver for every model (gurobi needs gurobipy and a license)")

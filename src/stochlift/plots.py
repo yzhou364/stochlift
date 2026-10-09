@@ -248,7 +248,7 @@ def draw_first_stage(study, fig, st, max_rows=12):
         if nm in changed and abs(a - b) < 0.025 * span:
             # the two markers would hide each other: a ring around the square keeps both visible
             ax.plot([a], [y], marker="o", ms=st.marker * 2.0, mfc="none", mec=C_EV, mew=st.line, ls="none",
-                    zorder=3)
+                    zorder=3, clip_on=False)
             ax.plot([b], [y], marker=M_RP, ms=st.marker * 1.0, color=C_RP, mec="white", mew=_mew(st), ls="none",
                     zorder=4)
             continue
@@ -265,7 +265,7 @@ def draw_first_stage(study, fig, st, max_rows=12):
     ax.set_yticks(range(len(shown)))
     ax.set_yticklabels([_short(nm) for nm in shown])
     ax.set_ylim(-0.6, len(shown) - 0.4)
-    ax.margins(x=0.08)
+    ax.margins(x=0.1)
     _hide_y_axis(ax)
     _scaled(ax, "x", "First-stage value", 5)
     handles = _entity_handles(st, "ev", "rp")
@@ -644,11 +644,123 @@ def height_frontier(study, st):
     return 58
 
 
+# ---------------------------------------------------------------------- sweep
+def draw_sweep(study, fig, st):
+    """VSS and EVPI as the scenarios are spread out or pulled in around their mean."""
+    from matplotlib.ticker import FuncFormatter
+
+    rows = [r for r in study.sweep if np.isfinite(r["VSS"])]
+    ax = fig.add_subplot()
+    k = [r["scale"] for r in rows]
+    ax.axvline(1.0, color=CONTEXT, lw=st.thin, zorder=0)
+    ax.plot(k, [r["EVPI"] for r in rows], color=C_WS, lw=st.line, marker=M_WS, ms=st.marker * 1.05,
+            mec="white", mew=_mew(st), label="EVPI (perfect information)", zorder=3)
+    ax.plot(k, [r["VSS"] for r in rows], color=C_RP, lw=st.line, marker=M_RP, ms=st.marker * 1.05,
+            mec="white", mew=_mew(st), label="VSS (stochastic decision)", zorder=4)
+    ax.text(1.0, 1.0, " as specified", transform=ax.get_xaxis_transform(), ha="left", va="top",
+            fontsize=st.small - 0.5, color=INK2)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel("Spread of the scenarios around their mean (\u00d7 specified)")
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    _scaled(ax, "y", "Value" if not study.risk.active else "Value (risk-adjusted)", 5)
+    _legend(fig, st, ncol=2)
+    if st.titles:
+        ax.set_title("Value of modelling the uncertainty as it grows")
+
+
+def caption_sweep(study) -> str:
+    rows = study.sweep
+    bad = [r["scale"] for r in rows if not np.isfinite(r["VSS"])]
+    miss = (f" Scales {', '.join(f'{b:g}' for b in bad)} are left out: the model has no solution there."
+            if bad else "")
+    one = next((r for r in rows if abs(r["scale"] - 1) < 1e-12), None)
+    at = (f" At the specified uncertainty VSS = {_num(one['VSS'])} and EVPI = {_num(one['EVPI'])}."
+          if one and np.isfinite(one["VSS"]) else "")
+    return ("Value of modelling the uncertainty as it grows. Each scenario's deviation from the mean is "
+            "multiplied by the factor on the horizontal axis (0: no uncertainty; 1: as specified), keeping "
+            "the mean and the probabilities, and the value of the stochastic solution (VSS, orange squares) "
+            f"and of perfect information (EVPI, green diamonds) are recomputed.{at}{miss}")
+
+
+def source_sweep(study):
+    import pandas as pd
+
+    return pd.DataFrame(study.sweep)
+
+
+def height_sweep(study, st):
+    return 50
+
+
+# -------------------------------------------------------------------- drivers
+def _driver_rows(study, max_rows=10):
+    rows = [r for r in study.drivers if not r["group"].startswith("all")][:max_rows]
+    total = next(r for r in study.drivers if r["group"].startswith("all"))
+    return rows, total
+
+
+def draw_drivers(study, fig, st):
+    """VSS and EVPI with only one group of uncertain data uncertain at a time."""
+    from matplotlib.lines import Line2D
+
+    rows, total = _driver_rows(study)
+    rows = rows[::-1]
+    ax = fig.add_subplot()
+    _row_guides(ax, range(len(rows)), st)
+    for y, r in enumerate(rows):
+        for key, color, marker, dy in (("EVPI", C_WS, M_WS, 0.14), ("VSS", C_RP, M_RP, -0.14)):
+            v = r[key]
+            if np.isfinite(v):
+                ax.plot([0, v], [y + dy, y + dy], color=color, lw=st.line * 1.6, solid_capstyle="butt",
+                        zorder=2)
+                ax.plot([v], [y + dy], marker=marker, ms=st.marker * 1.05, color=color, mec="white",
+                        mew=_mew(st), ls="none", zorder=3)
+    for key, color in (("EVPI", C_WS), ("VSS", C_RP)):
+        if np.isfinite(total[key]):
+            ax.axvline(total[key], color=color, lw=st.thin, ls=(0, (3, 2)), zorder=1)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([_short(r["group"]) for r in rows])
+    ax.set_ylim(-0.6, len(rows) - 0.4)
+    ax.set_xlim(left=0)
+    _hide_y_axis(ax)
+    _scaled(ax, "x", "Value with only these data uncertain", 5)
+    handles = [Line2D([], [], color=C_RP, marker=M_RP, lw=st.line, ms=st.marker, label="VSS"),
+               Line2D([], [], color=C_WS, marker=M_WS, lw=st.line, ms=st.marker, label="EVPI"),
+               Line2D([], [], color=INK2, lw=st.thin, ls=(0, (3, 2)), label="All data uncertain")]
+    _legend(fig, st, ncol=3, handles=handles)
+    if st.titles:
+        ax.set_title("Which uncertain data matter")
+
+
+def caption_drivers(study) -> str:
+    rows, total = _driver_rows(study)
+    top = rows[0] if rows else None
+    lead = (f" The largest is {top['group']} (EVPI {_num(top['EVPI'])}; {_num(total['EVPI'])} with all "
+            "data uncertain)." if top and np.isfinite(top["EVPI"]) else "")
+    return ("Which uncertain data matter. Value of the stochastic solution (VSS, orange squares) and of "
+            "perfect information (EVPI, green diamonds) when only one group of uncertain data varies across "
+            "the scenarios and all other data are fixed at their means. Dashed lines: the values with all "
+            f"data uncertain. Uncertainties interact, so the groups need not add up to the total.{lead}")
+
+
+def source_drivers(study):
+    import pandas as pd
+
+    return pd.DataFrame(study.drivers)
+
+
+def height_drivers(study, st):
+    return 18 + 8 * len(_driver_rows(study)[0])
+
+
 # ------------------------------------------------------------------- assembly
-PANELS = ["value", "first_stage", "scenarios", "out_of_sample", "gain", "stability", "frontier"]
+PANELS = ["value", "first_stage", "scenarios", "out_of_sample", "gain", "stability", "frontier", "sweep",
+          "drivers"]
 FILES = {"value": "fig_value", "first_stage": "fig_first_stage", "scenarios": "fig_scenarios",
          "out_of_sample": "fig_out_of_sample", "gain": "fig_gain", "stability": "fig_stability",
-         "frontier": "fig_risk_frontier"}
+         "frontier": "fig_risk_frontier", "sweep": "fig_uncertainty_sweep", "drivers": "fig_drivers"}
+# panels of the overview, in order of preference (at most six are shown)
+OVERVIEW = ["value", "first_stage", "gain", "drivers", "sweep", "frontier", "scenarios", "stability"]
 
 
 def available(study) -> list:
@@ -659,6 +771,10 @@ def available(study) -> list:
         out.append("stability")
     if study.frontier:
         out.append("frontier")
+    if getattr(study, "sweep", None):
+        out.append("sweep")
+    if getattr(study, "drivers", None):
+        out.append("drivers")
     return out
 
 
@@ -685,7 +801,8 @@ def overview(study, style="nature", panels=None):
     from matplotlib.figure import Figure
 
     st = get_style(style)
-    keys = list(panels or [k for k in available(study) if k != "out_of_sample"])[:6]
+    have = available(study)
+    keys = list(panels or [k for k in OVERVIEW if k in have])[:6]
     with mpl.rc_context(st.rc()):
         half = st.double / 2
         layout = []                       # list of rows; a row is one full-width key or two keys

@@ -159,6 +159,21 @@ def summary_markdown(study) -> str:
             L[-1:-1] = [f"- Risk-adjusted objective: mean-value decision {_fmt(o['risk_ev'])}, stochastic "
                         f"decision {_fmt(o['risk_rp'])}; gain {_fmt(o['risk_gain'])}, 95% bootstrap interval "
                         f"[{_fmt(o['risk_gain_ci95'][0])}, {_fmt(o['risk_gain_ci95'][1])}]."]
+    if getattr(study, "drivers", None):
+        L += ["## Which uncertain data matter", "",
+              "VSS and EVPI when only one group of uncertain data varies and the rest is fixed at its mean. "
+              "Uncertainties interact, so the rows need not add up to the total.", "",
+              "| Uncertain data | Entries | VSS | EVPI |", "| --- | ---: | ---: | ---: |"]
+        for d in study.drivers:
+            L.append(f"| {d['group']} | {d['entries']} | {_fmt(d['VSS'])} | {_fmt(d['EVPI'])} |")
+        L.append("")
+    if getattr(study, "sweep", None):
+        L += ["## Value as the uncertainty grows", "",
+              "Each scenario's deviation from the mean is scaled by the factor (1 = as specified).", "",
+              "| Scale | VSS | VSS (% of RP) | EVPI |", "| ---: | ---: | ---: | ---: |"]
+        for w in study.sweep:
+            L.append(f"| {w['scale']:g} | {_fmt(w['VSS'])} | {w['VSS_pct']:.2f}% | {_fmt(w['EVPI'])} |")
+        L.append("")
     if study.gap:
         g = study.gap
         L += ["## Solution quality", "",
@@ -210,7 +225,8 @@ def write_report(study, outdir, figures: bool = True, style: str = "nature") -> 
                "scenarios": {"names": study.scenarios.names, "probabilities": study.scenarios.probs,
                              "values": study.scenarios.values},
                "out_of_sample": study.oos, "stability": study.stability_table, "saa_gap": study.gap,
-               "risk_frontier": study.frontier}
+               "risk_frontier": study.frontier, "uncertainty_sweep": getattr(study, "sweep", None),
+               "value_by_parameter": getattr(study, "drivers", None)}
     with open(os.path.join(outdir, "results.json"), "w", encoding="utf-8") as f:
         json.dump(_jsonable(payload), f, indent=2)
     with open(os.path.join(outdir, "table_values.tex"), "w", encoding="utf-8") as f:

@@ -73,6 +73,8 @@ class Study:
         self.n_jobs = n_jobs          # parallel scenario solves; None = up to 8 threads
         self.risk = Risk.from_spec(self.spec.risk)
         self.frontier: Optional[list] = None
+        self.sweep: Optional[list] = None
+        self.drivers: Optional[list] = None
         self._cache: dict = {}
         self.train = self.test = None
         self.history_columns = None
@@ -396,6 +398,93 @@ class Study:
         self.gap = {"n": n, "batches": batches, "mean_gap": mean, "upper95": float(upper),
                     "pct_of_RP": 100.0 * float(upper) / abs(self.results.rp) if self.results.rp else float("nan")}
         return self.gap
+
+    # ------------------------------------------------------------- what drives it
+    def _metrics(self, values, probs) -> dict:
+        """RP, WS, EEV, VSS and EVPI for other scenario values with the same mean.
+
+        The mean-value decision is the study's own (the mean is unchanged), so only
+        the recourse problem, the wait-and-see solves and the evaluation of that
+        decision are repeated. Values that make the program infeasible give ``nan``.
+        """
+        if self.results is None:
+            self.solve()
+        probs = np.asarray(probs, dtype=float)
+        models = self.models(values)
+        sign = models[0].sign
+        nan = float("nan")
+        ws, statuses = wait_and_see(models, n_jobs=self.n_jobs, **self.opts)
+        if any(st != "optimal" for st in statuses):
+            return {"RP": nan, "WS": nan, "EEV": nan, "VSS": nan, "EVPI": nan, "VSS_pct": nan,
+                    "status": f"{sum(st != 'optimal' for st in statuses)} scenarios infeasible on their own"}
+        try:
+            z_rp, _, _ = solve_recourse_problem(models, probs, self.is_first, risk=self.risk, n_jobs=self.n_jobs,
+                                                **self.opts)
+        except SolveError as e:
+            return {"RP": nan, "WS": nan, "EEV": nan, "VSS": nan, "EVPI": nan, "VSS_pct": nan,
+                    "status": f"stochastic program {e.status or 'not solved'}"}
+        costs_ev = evaluate_first_stage(models, self.results.x_ev, self.is_first, n_jobs=self.n_jobs, **self.opts)
+        z_ws = self.risk.value(ws, probs)
+        z_eev = self.risk.value(costs_ev, probs)
+        vss = _clamp(z_eev - z_rp, z_rp)
+        return {"RP": sign * z_rp, "WS": sign * z_ws, "EEV": sign * z_eev, "VSS": vss,
+                "EVPI": _clamp(z_rp - z_ws, z_rp), "VSS_pct": 100 * vss / abs(z_rp) if z_rp else nan,
+                "EEV_infeasible": int(np.isnan(costs_ev).sum()), "status": "optimal"}
+
+    def uncertainty_sweep(self, scales=(0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0)) -> list:
+        """How VSS and EVPI grow with the amount of uncertainty.
+
+        Every scenario's deviation from the mean is multiplied by each scale
+        (0: no uncertainty, 1: the scenarios as specified, 2: twice as spread out),
+        keeping the mean and the probabilities. Scaled values are not clipped, so a
+        large scale can produce values the model cannot handle (reported as nan).
+        """
+        S = self.scenarios
+        mu = S.mean()
+        rows = []
+        for k in scales:
+            row = {"scale": float(k)}
+            row.update(self._metrics(mu + float(k) * (S.values - mu), S.probs))
+            rows.append(row)
+        self.sweep = rows
+        return rows
+
+    def value_by_parameter(self, level: str = "auto", max_groups: int = 12) -> list:
+        """Which uncertain data drive the value of the stochastic solution?
+
+        For each group of uncertain entries, every other entry is fixed at its mean
+        and VSS and EVPI are recomputed with only that group uncertain. Groups are
+        top-level data keys (``level="key"``), single entries (``"entry"``), or with
+        ``"auto"`` keys when there are several and entries otherwise. The values of
+        the groups need not add up to the total: uncertainties interact.
+        """
+        S = self.scenarios
+        mu = S.mean()
+        if level not in ("auto", "key", "entry"):
+            raise ValueError("level must be 'auto', 'key' or 'entry'")
+        keys = [str(p[0]) for p in S.paths]
+        if level == "key" or (level == "auto" and len(set(keys)) > 1):
+            groups: dict = {}
+            for j, k in enumerate(keys):
+                groups.setdefault(k, []).append(j)
+        else:
+            groups = {S.names[j]: [j] for j in range(len(S.paths))}
+        if len(groups) > max_groups:
+            spread = {g: float(np.sqrt(S.probs @ ((S.values[:, idx] - mu[idx]) / np.where(mu[idx] != 0, np.abs(mu[idx]), 1)) ** 2).sum())
+                      for g, idx in groups.items()}
+            groups = dict(sorted(groups.items(), key=lambda kv: -spread[kv[0]])[:max_groups])
+        rows = []
+        for g, idx in groups.items():
+            V = np.tile(mu, (len(S), 1))
+            V[:, idx] = S.values[:, idx]
+            row = {"group": g, "entries": len(idx)}
+            row.update(self._metrics(V, S.probs))
+            rows.append(row)
+        total = {"group": "all (as specified)", "entries": len(S.paths)}
+        total.update(self._metrics(S.values, S.probs))
+        rows.sort(key=lambda r: -(r["EVPI"] if np.isfinite(r["EVPI"]) else -np.inf))
+        self.drivers = rows + [total]
+        return self.drivers
 
     # ---------------------------------------------------------------------- risk
     def risk_frontier(self, weights=(0.0, 0.25, 0.5, 0.75, 0.9, 1.0), alpha: float = None) -> list:

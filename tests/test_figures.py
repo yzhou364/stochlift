@@ -22,6 +22,8 @@ def study(farmer):
     s.out_of_sample()
     s.stability(sizes=(5, 10), reps=2)
     s.risk_frontier(weights=(0.0, 0.5, 1.0))
+    s.uncertainty_sweep(scales=(0.0, 0.5, 1.0, 1.5))
+    s.value_by_parameter()
     return s
 
 
@@ -31,7 +33,7 @@ def _texts(fig):
 
 def test_every_figure_is_available(study):
     assert plots.available(study) == ["value", "first_stage", "scenarios", "out_of_sample", "gain",
-                                      "stability", "frontier"]
+                                      "stability", "frontier", "sweep", "drivers"]
 
 
 @pytest.mark.parametrize("key", plots.PANELS)
@@ -63,7 +65,7 @@ def test_overview_is_two_columns_with_panel_letters(study):
 
 def test_written_files(study, tmp_path):
     made = study.figures(tmp_path)
-    assert os.path.basename(made[0]) == "fig_overview.pdf" and len(made) == 8
+    assert os.path.basename(made[0]) == "fig_overview.pdf" and len(made) == 10
     pdf = (tmp_path / "fig_value.pdf").read_bytes()
     assert b"/Type3" not in pdf                                   # TrueType text, editable in Illustrator
     box = [float(v) for v in re.search(rb"/MediaBox \[\s*([\d. ]+)\]", pdf).group(1).split()]
@@ -83,7 +85,7 @@ def test_source_data_and_legends(study, tmp_path):
     assert gain["gain_of_stochastic_decision"].mean() == pytest.approx(study.oos["mean_gain"])
     text = (tmp_path / "captions.md").read_text(encoding="utf-8")
     assert "**Overview |" in text and "**a,**" in text and "**f,**" in text
-    assert text.count("**Fig. ") == 7 and "95% bootstrap interval" in text
+    assert text.count("**Fig. ") == 9 and "95% bootstrap interval" in text
 
 
 def test_report_embeds_the_overview(study, tmp_path):
